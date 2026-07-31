@@ -1,0 +1,50 @@
+{
+  "name": "mission-control-system",
+  "version": "1.0.0",
+  "description": "Command & Control Performance Management System (CCPMS) Backend",
+  "main": "dist/server.js",
+  "scripts": {
+    "build:frontend": "cd client && npm run build",
+    "build:backend": "tsc",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "node dist/server.js",
+    "dev:backend": "tsx watch src/server.ts",
+    "dev:frontend": "cd client && npm run dev",
+    "dev": "tsx watch src/server.ts",
+    "seed": "tsx prisma/seed.ts",
+    "test:backend": "tsx test-backend.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "keywords": [
+    "ccpms",
+    "express",
+    "prisma",
+    "kingschat",
+    "kpi",
+    "performance-management"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.1.2",
+    "@types/node-cron": "^3.0.11",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "axios": "^1.19.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.6.0"
+  }
+}
