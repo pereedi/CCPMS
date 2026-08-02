@@ -4,7 +4,7 @@
   "description": "Command & Control Performance Management System (CCPMS) Backend",
   "main": "dist/server.js",
   "scripts": {
-    "build:frontend": "cd client && npm run build",
+    "build:frontend": "cd client && npm install && npm run build",
     "build:backend": "tsc",
     "build": "npm run build:frontend && npm run build:backend && npx prisma generate && npx prisma db push",
     "start": "node dist/server.js",
