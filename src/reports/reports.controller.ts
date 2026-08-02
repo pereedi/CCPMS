@@ -69,12 +69,16 @@ export class ReportsController {
   async approveReport(req: AuthRequest, res: Response) {
     try {
       const id = req.params.id as string;
-      const { action, comments } = req.body; // APPROVE or REJECT
-      if (!action || !['APPROVE', 'REJECT'].includes(action)) {
-        return sendError(res, 'Valid action (APPROVE or REJECT) is required', 400);
+      const { action, comments } = req.body;
+      if (!action) {
+        return sendError(res, 'Action is required', 400);
       }
-      const updated = await reportsService.approveReportByDirector(id, req.user!.id, action, comments);
-      return sendSuccess(res, updated, `Director approval recorded: ${action}`);
+      const actStr = String(action).toUpperCase();
+      const normalizedAction: 'APPROVE' | 'REJECT' = actStr.includes('APPROVE') ? 'APPROVE' : 'REJECT';
+      const approverRole = req.user?.role?.name || 'SUPER_ADMIN';
+
+      const updated = await reportsService.approveReportByDirector(id, req.user!.id, normalizedAction, comments, approverRole);
+      return sendSuccess(res, updated, `Report ${normalizedAction === 'APPROVE' ? 'approved' : 'rejected'} successfully by ${approverRole.replace('_', ' ')}`);
     } catch (error: any) {
       return sendError(res, error.message, 400);
     }

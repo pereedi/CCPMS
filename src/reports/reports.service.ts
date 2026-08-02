@@ -120,22 +120,26 @@ export class ReportsService {
     return updated;
   }
 
-  async approveReportByDirector(reportId: string, directorId: string, action: 'APPROVE' | 'REJECT', comments?: string) {
+  async approveReportByDirector(
+    reportId: string,
+    approverId: string,
+    action: 'APPROVE' | 'REJECT',
+    comments?: string,
+    approverRole: string = 'SUPER_ADMIN'
+  ) {
     const report = await prisma.report.findUnique({ where: { id: reportId } });
     if (!report) throw new Error('Report not found');
-    if (report.status !== 'MANAGER_APPROVED' && report.status !== 'SUBMITTED') {
-      throw new Error(`Report cannot be approved by Director in status: ${report.status}`);
-    }
 
-    const newStatus = action === 'APPROVE' ? 'DIRECTOR_APPROVED' : 'REJECTED';
+    const isApprove = action === 'APPROVE';
+    const newStatus = isApprove ? (approverRole === 'SUPER_ADMIN' ? 'APPROVED' : 'DIRECTOR_APPROVED') : 'REJECTED';
 
     await prisma.reportApproval.create({
       data: {
         reportId,
-        approverId: directorId,
-        roleAtApproval: 'DIRECTOR',
-        action: newStatus,
-        comments,
+        approverId,
+        roleAtApproval: approverRole,
+        action: isApprove ? 'APPROVED' : 'REJECTED',
+        comments: comments || (isApprove ? 'Report approved.' : 'Report rejected.'),
       },
     });
 
@@ -144,17 +148,28 @@ export class ReportsService {
       data: { status: newStatus },
     });
 
-    // If Director Approved: Trigger automated KPI score calculation & Executive updates
-    if (newStatus === 'DIRECTOR_APPROVED') {
+    // If Approved: Trigger automated KPI score calculation & Executive updates
+    if (isApprove) {
       await recalculateDirectorateKpiSummary(report.directorateId);
-      
+
       // Notify Author
       await prisma.notification.create({
         data: {
           userId: report.authorId,
           title: 'Report Approved!',
-          message: `Your report "${report.title}" has been fully approved by the Directorate Director.`,
+          message: `Your report "${report.title}" has been approved by ${approverRole === 'SUPER_ADMIN' ? 'the Super Admin' : 'the Directorate Director'}.`,
           type: 'INFO',
+          link: `/reports/${report.id}`,
+        },
+      });
+    } else {
+      // Notify Author of Rejection
+      await prisma.notification.create({
+        data: {
+          userId: report.authorId,
+          title: 'Report Rejected',
+          message: `Your report "${report.title}" was rejected by ${approverRole === 'SUPER_ADMIN' ? 'the Super Admin' : 'the Directorate Director'}. Reason: ${comments || 'No comment provided.'}`,
+          type: 'ALERT',
           link: `/reports/${report.id}`,
         },
       });

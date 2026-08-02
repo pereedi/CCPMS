@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { DashboardSummary } from '../../types';
-import { Target, FolderKanban, Building2, TrendingUp, DollarSign, Users, Database, FileSpreadsheet, Eye, Sparkles } from 'lucide-react';
+import { Target, FolderKanban, Building2, TrendingUp, DollarSign, Users, Database, FileSpreadsheet, Eye, Sparkles, CheckCircle, Check } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 export const OverviewTab: React.FC = () => {
@@ -9,10 +9,26 @@ export const OverviewTab: React.FC = () => {
   const [reportsAnalytics, setReportsAnalytics] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedReportModal, setSelectedReportModal] = useState<any | null>(null);
+  const [approvingReportId, setApprovingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handleQuickApprove = async (reportId: string) => {
+    setApprovingReportId(reportId);
+    try {
+      await api.post(`/reports/${reportId}/approve`, {
+        action: 'APPROVE',
+        comments: 'Quick approved from Executive Command Dashboard'
+      });
+      await fetchDashboardData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to approve report');
+    } finally {
+      setApprovingReportId(null);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -260,34 +276,65 @@ export const OverviewTab: React.FC = () => {
                   <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>TITLE</th>
                   <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>DIRECTORATE</th>
                   <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>ACHIEVEMENT</th>
+                  <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>STATUS</th>
                   <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>SUBMITTED BY</th>
                   <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>DATE</th>
+                  <th style={{ padding: '12px 16px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>ACTION</th>
                 </tr>
               </thead>
               <tbody>
-                {reportsAnalytics.reports.map((r: any) => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
-                      {r.title}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span className="badge badge-role" style={{ fontSize: '0.7rem' }}>
-                        {r.directorate?.code || 'HQ'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span className="badge badge-excellent">
-                        {r.achievementPct || 85}%
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#60a5fa' }}>
-                      {r.author?.name || 'Director'}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(r.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
+                {reportsAnalytics.reports.map((r: any) => {
+                  const isApproved = ['APPROVED', 'DIRECTOR_APPROVED', 'SUPER_ADMIN_APPROVED'].includes(r.status);
+                  return (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                        {r.title}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span className="badge badge-role" style={{ fontSize: '0.7rem' }}>
+                          {r.directorate?.code || 'HQ'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span className="badge badge-excellent">
+                          {r.achievementPct || 85}%
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {isApproved ? (
+                          <span className="badge badge-excellent" style={{ fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
+                            ✓ APPROVED
+                          </span>
+                        ) : (
+                          <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
+                            ⏳ PENDING
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#60a5fa' }}>
+                        {r.author?.name || 'Director'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {new Date(r.createdAt).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        {!isApproved ? (
+                          <button
+                            onClick={() => handleQuickApprove(r.id)}
+                            disabled={approvingReportId === r.id}
+                            className="btn btn-kingschat btn-sm"
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700 }}
+                          >
+                            <Check style={{ width: '12px', height: '12px' }} />
+                            {approvingReportId === r.id ? 'Approving...' : 'Approve'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 700 }}>Approved</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

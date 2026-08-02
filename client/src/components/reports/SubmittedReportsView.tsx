@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Report } from '../../types';
 import { DirectorReportForm } from '../directorates/DirectorReportForm';
-import { FileText, Eye, CheckCircle2, DollarSign, Users, Database, Target, TrendingUp, X, Edit3 } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, DollarSign, Users, Database, Target, TrendingUp, X, Edit3, Check, XCircle, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export const SubmittedReportsView: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [editingReport, setEditingReport] = useState<any | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ id: string; msg: string; type: 'success' | 'error' } | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubmittedReports();
@@ -40,6 +42,69 @@ export const SubmittedReportsView: React.FC = () => {
     }
   };
 
+  const handleApproveReport = async (reportId: string) => {
+    setApprovingId(reportId);
+    setActionFeedback(null);
+    try {
+      const res: any = await api.post(`/reports/${reportId}/approve`, {
+        action: 'APPROVE',
+        comments: 'Approved by Super Admin'
+      });
+      if (res.success) {
+        setActionFeedback({
+          id: reportId,
+          msg: '✅ Directorate Report successfully APPROVED by Super Admin!',
+          type: 'success'
+        });
+        await fetchSubmittedReports();
+        if (selectedReport && selectedReport.report.id === reportId) {
+          setSelectedReport((prev: any) => prev ? { ...prev, report: { ...prev.report, status: 'APPROVED' } } : null);
+        }
+      }
+    } catch (err: any) {
+      setActionFeedback({
+        id: reportId,
+        msg: err.message || 'Failed to approve report.',
+        type: 'error'
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectReport = async (reportId: string) => {
+    const reason = prompt('Please enter rejection reason/comments for the Directorate:', 'Report requires revision on milestone targets');
+    if (reason === null) return; // User cancelled
+
+    setApprovingId(reportId);
+    setActionFeedback(null);
+    try {
+      const res: any = await api.post(`/reports/${reportId}/approve`, {
+        action: 'REJECT',
+        comments: reason || 'Rejected by Super Admin'
+      });
+      if (res.success) {
+        setActionFeedback({
+          id: reportId,
+          msg: 'Report returned / REJECTED with comments sent to author.',
+          type: 'error'
+        });
+        await fetchSubmittedReports();
+        if (selectedReport && selectedReport.report.id === reportId) {
+          setSelectedReport((prev: any) => prev ? { ...prev, report: { ...prev.report, status: 'REJECTED' } } : null);
+        }
+      }
+    } catch (err: any) {
+      setActionFeedback({
+        id: reportId,
+        msg: err.message || 'Failed to reject report.',
+        type: 'error'
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const parseReportData = (r: Report) => {
     let parsed: any = {};
     if (r && (r as any).dataJson) {
@@ -53,6 +118,8 @@ export const SubmittedReportsView: React.FC = () => {
     return parsed;
   };
 
+  const isApproved = (status: string) => ['APPROVED', 'DIRECTOR_APPROVED', 'SUPER_ADMIN_APPROVED'].includes(status);
+
   if (loading) {
     return <div style={{ padding: '40px', color: 'var(--text-secondary)' }}>Loading submitted reports...</div>;
   }
@@ -61,9 +128,13 @@ export const SubmittedReportsView: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>Submitted Directorate Reports</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <ShieldCheck style={{ width: '18px', height: '18px', color: 'var(--kingschat-gold)' }} />
+            <span className="badge badge-role">SUPER ADMIN EXECUTIVE APPROVALS</span>
+          </div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>Submitted Directorate Reports Feed</h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Review & Edit Submitted Goals, Percentage Achievements, Financial Targets, Strategic Pillars & Staffing
+            Review, Approve, Edit, & Audit Directorate Submissions (Percentage Achievements, Financial Targets & Staffing)
           </p>
         </div>
       </div>
@@ -72,11 +143,33 @@ export const SubmittedReportsView: React.FC = () => {
         {reports.map((report) => {
           const data = parseReportData(report);
           const pct = data.percentageAchievement || '85';
+          const approved = isApproved(report.status);
+          const rejected = report.status === 'REJECTED';
+          const isPending = approvingId === report.id;
+
           return (
-            <div key={report.id} className="glass-panel" style={{ padding: '20px 24px', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div key={report.id} className="glass-panel" style={{
+              padding: '20px 24px',
+              borderRadius: '16px',
+              border: approved ? '1px solid rgba(16, 185, 129, 0.4)' : rejected ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid rgba(245, 158, 11, 0.3)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    {approved ? (
+                      <span className="badge badge-excellent" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
+                        <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED
+                      </span>
+                    ) : rejected ? (
+                      <span className="badge badge-critical" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <XCircle style={{ width: '14px', height: '14px' }} /> REJECTED
+                      </span>
+                    ) : (
+                      <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 800, background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid #f59e0b' }}>
+                        ⏳ PENDING APPROVAL
+                      </span>
+                    )}
+
                     <span className="badge badge-excellent" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
                       {pct}% Achieved
                     </span>
@@ -87,20 +180,61 @@ export const SubmittedReportsView: React.FC = () => {
                       Period: {report.period} • Submitted by {report.author?.name || 'Director'}
                     </span>
                   </div>
+
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff' }}>{report.title}</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
                     {report.summary}
                   </p>
+
+                  {actionFeedback && actionFeedback.id === report.id && (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      background: actionFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                      color: actionFeedback.type === 'success' ? '#34d399' : '#f87171',
+                      border: actionFeedback.type === 'success' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)'
+                    }}>
+                      {actionFeedback.msg}
+                    </div>
+                  )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                {/* APPROVAL ACTIONS FOR SUPER ADMIN */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {!approved && (
+                    <button
+                      onClick={() => handleApproveReport(report.id)}
+                      disabled={isPending}
+                      className="btn btn-kingschat btn-sm"
+                      style={{ gap: '6px', padding: '8px 16px', fontWeight: 800 }}
+                    >
+                      <Check style={{ width: '16px', height: '16px' }} />
+                      {isPending ? 'Approving...' : 'Approve Report'}
+                    </button>
+                  )}
+
+                  {!approved && !rejected && (
+                    <button
+                      onClick={() => handleRejectReport(report.id)}
+                      disabled={isPending}
+                      className="btn btn-secondary btn-sm"
+                      style={{ gap: '6px', color: '#f87171', borderColor: 'rgba(244, 63, 94, 0.4)' }}
+                    >
+                      <XCircle style={{ width: '14px', height: '14px' }} />
+                      Reject
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setEditingReport(report)}
                     className="btn btn-secondary btn-sm"
                     style={{ gap: '6px', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}
                   >
                     <Edit3 style={{ width: '14px', height: '14px' }} />
-                    Edit Report
+                    Edit
                   </button>
 
                   <button
@@ -109,7 +243,7 @@ export const SubmittedReportsView: React.FC = () => {
                     style={{ gap: '6px' }}
                   >
                     <Eye style={{ width: '14px', height: '14px' }} />
-                    View Card
+                    View Details
                   </button>
                 </div>
               </div>
@@ -171,16 +305,35 @@ export const SubmittedReportsView: React.FC = () => {
                   <span className="badge badge-excellent" style={{ fontSize: '0.8rem' }}>
                     {selectedReport.data.percentageAchievement || '85'}% Target Achievement
                   </span>
-                  <span className="badge badge-good">{selectedReport.report.type} REPORT</span>
+                  {isApproved(selectedReport.report.status) ? (
+                    <span className="badge badge-excellent" style={{ fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
+                      <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED BY SUPER ADMIN
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ fontSize: '0.8rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
+                      ⏳ PENDING APPROVAL
+                    </span>
+                  )}
                 </div>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff' }}>{selectedReport.report.title}</h2>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                   Directorate: {selectedReport.report.directorate?.name} • Author: {selectedReport.report.author?.name}
                 </div>
               </div>
-              <button onClick={() => setSelectedReport(null)} className="btn btn-secondary btn-sm" style={{ padding: '6px' }}>
-                <X style={{ width: '18px', height: '18px' }} />
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {!isApproved(selectedReport.report.status) && (
+                  <button
+                    onClick={() => handleApproveReport(selectedReport.report.id)}
+                    className="btn btn-kingschat btn-sm"
+                    style={{ gap: '6px' }}
+                  >
+                    <Check style={{ width: '14px', height: '14px' }} /> Approve Now
+                  </button>
+                )}
+                <button onClick={() => setSelectedReport(null)} className="btn btn-secondary btn-sm" style={{ padding: '6px' }}>
+                  <X style={{ width: '18px', height: '18px' }} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Sections */}

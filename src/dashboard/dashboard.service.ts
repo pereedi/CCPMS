@@ -35,7 +35,7 @@ export class DashboardService {
 
     // 3. Data Score (Report submission & approval rate)
     const totalReports = await prisma.report.count();
-    const approvedReports = await prisma.report.count({ where: { status: 'DIRECTOR_APPROVED' } });
+    const approvedReports = await prisma.report.count({ where: { status: { in: ['DIRECTOR_APPROVED', 'APPROVED'] } } });
     const dataScore = totalReports > 0 ? Math.round((approvedReports / totalReports) * 100 * 100) / 100 : 90.0;
 
     // 4. Money Score (Budget efficiency)
