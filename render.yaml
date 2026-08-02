@@ -2,7 +2,7 @@ services:
   - type: web
     name: mission-control-system
     runtime: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: DATABASE_URL
