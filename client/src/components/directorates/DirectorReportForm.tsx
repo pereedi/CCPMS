@@ -603,7 +603,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
             <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '16px', borderRadius: '12px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <DollarSign style={{ width: '16px', height: '16px' }} />
+                <Coins style={{ width: '16px', height: '16px' }} />
                 3. Money Pillar Objectives (Financial Efficiency, ROI & Cost Management)
               </label>
               <textarea

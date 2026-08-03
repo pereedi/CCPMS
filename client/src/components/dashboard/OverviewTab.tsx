@@ -205,7 +205,7 @@ export const OverviewTab: React.FC = () => {
 
           <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <DollarSign style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
+              <Coins style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
               <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>3. Money Pillar</h4>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
