@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Send, FileSpreadsheet, Target, TrendingUp, DollarSign, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2 } from 'lucide-react';
+import { Send, FileSpreadsheet, Target, TrendingUp, Coins, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2 } from 'lucide-react';
 
 interface DirectorReportFormProps {
   editReportData?: any;
@@ -530,7 +530,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         {/* SECTION 3: FINANCIAL OBJECTIVES */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <DollarSign style={{ width: '20px', height: '20px', color: 'var(--accent-amber)' }} />
+            <Coins style={{ width: '20px', height: '20px', color: 'var(--accent-amber)' }} />
             Section 3: Financial Objectives (Targets vs Achievements)
           </h3>
 
