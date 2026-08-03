@@ -30,7 +30,7 @@ export const SubmittedReportsView: React.FC = () => {
           title: 'July 2026 Technology & Digital Innovation Directorate Report',
           type: 'MONTHLY',
           period: '2026-M07',
-          summary: 'Goal Achievement: 90%. Financial Achievement: $135,000 of $150,000 Target. Headcount: 12 Staff.',
+          summary: 'Goal Achievement: 90%. Financial Achievement: 135,000 ESP of 150,000 ESP Target. Headcount: 12 Staff.',
           status: 'SUBMITTED',
           createdAt: new Date().toISOString(),
           author: { name: 'Directorate Director' },
@@ -376,13 +376,13 @@ export const SubmittedReportsView: React.FC = () => {
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Budget</span>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
-                      ${selectedReport.data.financialTarget ? parseFloat(selectedReport.data.financialTarget).toLocaleString() : '150,000'}
+                      {selectedReport.data.financialTarget ? parseFloat(selectedReport.data.financialTarget).toLocaleString() : '150,000'} ESP
                     </div>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Achieved Financials</span>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399' }}>
-                      ${selectedReport.data.financialAchievement ? parseFloat(selectedReport.data.financialAchievement).toLocaleString() : '135,000'}
+                      {selectedReport.data.financialAchievement ? parseFloat(selectedReport.data.financialAchievement).toLocaleString() : '135,000'} ESP
                     </div>
                   </div>
                 </div>

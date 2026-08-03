@@ -101,15 +101,15 @@ export const ProjectsTab: React.FC = () => {
               marginBottom: '16px'
             }}>
               <div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BUDGET</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BUDGET (ESP)</span>
                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#ffffff' }}>
-                  ${proj.budget.toLocaleString()}
+                  {proj.budget.toLocaleString()} ESP
                 </div>
               </div>
               <div>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SPENT TO DATE</span>
                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fbbf24' }}>
-                  ${proj.spent.toLocaleString()}
+                  {proj.spent.toLocaleString()} ESP
                 </div>
               </div>
             </div>

@@ -215,7 +215,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       },
     };
 
-    const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: $${parseFloat(financialAchievement).toLocaleString()} of $${parseFloat(financialTarget).toLocaleString()} Target. Headcount: ${headcount} Staff.`;
+    const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: ${parseFloat(financialAchievement).toLocaleString()} ESP of ${parseFloat(financialTarget).toLocaleString()} ESP Target. Headcount: ${headcount} Staff.`;
 
     try {
       let res: any;
@@ -537,7 +537,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                Financial Target ($)
+                Financial Target (Espees - ESP)
               </label>
               <input
                 type="number"
@@ -551,7 +551,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                Financial Achievement ($)
+                Financial Achievement (Espees - ESP)
               </label>
               <input
                 type="number"

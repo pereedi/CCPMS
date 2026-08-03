@@ -26,7 +26,7 @@ export const PerformanceCalendar: React.FC = () => {
           title: 'July 2026 Technology Directorate Performance Summary',
           period: '2026-07-31',
           createdAt: '2026-07-31T10:00:00Z',
-          summary: 'Goal Achievement: 90%. Financial Achievement: $135,000.',
+          summary: 'Goal Achievement: 90%. Financial Achievement: 135,000 ESP.',
           status: 'SUBMITTED',
           directorate: { name: 'Technology & Innovation', code: 'TECH' },
           author: { name: 'Directorate Director' }

@@ -144,14 +144,14 @@ export const OverviewTab: React.FC = () => {
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>FINANCIAL ACHIEVEMENTS</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>FINANCIAL ACHIEVEMENTS (ESP)</span>
             <DollarSign style={{ width: '20px', height: '20px', color: 'var(--accent-amber)' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-            ${(reportsAnalytics?.overview?.totalFinancialAchievement || 135000).toLocaleString()}
+            {(reportsAnalytics?.overview?.totalFinancialAchievement || 135000).toLocaleString()} ESP
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Target: ${(reportsAnalytics?.overview?.totalFinancialTarget || 150000).toLocaleString()}
+            Target: {(reportsAnalytics?.overview?.totalFinancialTarget || 150000).toLocaleString()} ESP
           </div>
         </div>
 
@@ -243,7 +243,7 @@ export const OverviewTab: React.FC = () => {
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <DollarSign style={{ width: '18px', height: '18px', color: '#fbbf24' }} />
-            Financial Targets vs. Achievements ($)
+            Financial Targets vs. Achievements (Espees - ESP)
           </h3>
           <div style={{ height: '260px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -253,8 +253,8 @@ export const OverviewTab: React.FC = () => {
                 <YAxis stroke="#9ca3af" fontSize={12} />
                 <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
                 <Legend />
-                <Bar dataKey="financialTarget" name="Target ($)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="financialAchievement" name="Achieved ($)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="financialTarget" name="Target (ESP)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="financialAchievement" name="Achieved (ESP)" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
