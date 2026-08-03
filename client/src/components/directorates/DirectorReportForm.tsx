@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Send, FileSpreadsheet, Target, TrendingUp, Coins, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2 } from 'lucide-react';
+import { Send, FileSpreadsheet, Target, TrendingUp, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2 } from 'lucide-react';
+import { EspIcon } from '../common/EspIcon';
 
 interface DirectorReportFormProps {
   editReportData?: any;
@@ -530,7 +531,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         {/* SECTION 3: FINANCIAL OBJECTIVES */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Coins style={{ width: '20px', height: '20px', color: 'var(--accent-amber)' }} />
+            <EspIcon style={{ width: '20px', height: '20px' }} />
             Section 3: Financial Objectives (Targets vs Achievements)
           </h3>
 
@@ -603,7 +604,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
             <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '16px', borderRadius: '12px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Coins style={{ width: '16px', height: '16px' }} />
+                <EspIcon style={{ width: '18px', height: '18px' }} />
                 3. Money Pillar Objectives (Financial Efficiency, ROI & Cost Management)
               </label>
               <textarea

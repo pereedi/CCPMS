@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { DashboardSummary } from '../../types';
-import { Target, FolderKanban, Building2, TrendingUp, Coins, Users, Database, FileSpreadsheet, Eye, Sparkles, CheckCircle, Check } from 'lucide-react';
+import { Target, FolderKanban, Building2, TrendingUp, Users, Database, FileSpreadsheet, Eye, Sparkles, CheckCircle, Check } from 'lucide-react';
+import { EspIcon } from '../common/EspIcon';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 export const OverviewTab: React.FC = () => {
@@ -145,7 +146,7 @@ export const OverviewTab: React.FC = () => {
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>FINANCIAL ACHIEVEMENTS (ESP)</span>
-            <Coins style={{ width: '20px', height: '20px', color: 'var(--accent-amber)' }} />
+            <EspIcon style={{ width: '22px', height: '22px' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
             {(reportsAnalytics?.overview?.totalFinancialAchievement || 135000).toLocaleString()} ESP
@@ -205,7 +206,7 @@ export const OverviewTab: React.FC = () => {
 
           <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <Coins style={{ width: '20px', height: '20px', color: '#fbbf24' }} />
+              <EspIcon style={{ width: '20px', height: '20px' }} />
               <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>3. Money Pillar</h4>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -242,7 +243,7 @@ export const OverviewTab: React.FC = () => {
         {/* Chart 2: Financial Targets vs Achievements Comparison */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Coins style={{ width: '18px', height: '18px', color: '#fbbf24' }} />
+            <EspIcon style={{ width: '20px', height: '20px' }} />
             Financial Targets vs. Achievements (Espees - ESP)
           </h3>
           <div style={{ height: '260px', width: '100%' }}>

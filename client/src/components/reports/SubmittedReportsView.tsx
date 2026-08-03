@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Report } from '../../types';
 import { DirectorReportForm } from '../directorates/DirectorReportForm';
-import { FileText, Eye, CheckCircle2, Coins, Users, Database, Target, TrendingUp, X, Edit3, Check, XCircle, ShieldCheck, AlertCircle } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, Users, Database, Target, TrendingUp, X, Edit3, Check, XCircle, ShieldCheck, AlertCircle } from 'lucide-react';
+import { EspIcon } from '../common/EspIcon';
 
 export const SubmittedReportsView: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -370,7 +371,7 @@ export const SubmittedReportsView: React.FC = () => {
               {/* Financials */}
               <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '16px', borderRadius: '12px' }}>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Coins style={{ width: '16px', height: '16px' }} /> Financial Objectives (ESP)
+                  <EspIcon style={{ width: '18px', height: '18px' }} /> Financial Objectives (ESP)
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Project } from '../../types';
-import { FolderKanban, CheckCircle2, Clock, AlertTriangle, Coins, Calendar } from 'lucide-react';
+import { FolderKanban, CheckCircle2, Clock, AlertTriangle, Calendar } from 'lucide-react';
+import { EspIcon } from '../common/EspIcon';
 
 export const ProjectsTab: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -101,7 +102,9 @@ export const ProjectsTab: React.FC = () => {
               marginBottom: '16px'
             }}>
               <div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>BUDGET (ESP)</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <EspIcon style={{ width: '14px', height: '14px' }} /> BUDGET (ESP)
+                </span>
                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#ffffff' }}>
                   {proj.budget.toLocaleString()} ESP
                 </div>
