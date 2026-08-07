@@ -244,7 +244,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
       if (res.success) {
         const actionText = editReportData ? 'updated' : 'submitted';
-        setSuccessMsg(`Report "${title}" ${actionText} successfully for [${selectedDirectorateName}] on ${reportDate}! It is reflected on the Super Admin Executive Command.`);
+        setSuccessMsg(`Report "${title}" ${actionText} successfully for [${selectedDirectorateName}] on ${reportDate}! It is reflected on the OFEM Executive Command.`);
         
         if (!editReportData) {
           setTitle('');

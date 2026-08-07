@@ -152,8 +152,8 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '1.2rem' }}>👑</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>Super Admin User</div>
-                  <div style={{ fontSize: '0.75rem', color: '#c084fc' }}>Super Admin • Full System Controls</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>OFEM — Office of Executive Minister</div>
+                  <div style={{ fontSize: '0.75rem', color: '#c084fc' }}>Full System Controls &amp; Approvals</div>
                 </div>
               </div>
               <ArrowRight style={{ width: '16px', height: '16px', color: '#c084fc' }} />
@@ -175,8 +175,8 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '1.2rem' }}>🏢</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>Directorate Director</div>
-                  <div style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Directorate Head • Technology & Digital Innovation</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>AD — Assistant Director</div>
+                  <div style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Submit &amp; Manage Directorate Reports</div>
                 </div>
               </div>
               <ArrowRight style={{ width: '16px', height: '16px', color: '#60a5fa' }} />

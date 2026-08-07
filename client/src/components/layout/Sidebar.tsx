@@ -5,8 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  activeRoleView: 'SUPER_ADMIN' | 'DIRECTOR';
-  setActiveRoleView: (role: 'SUPER_ADMIN' | 'DIRECTOR') => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -14,54 +12,55 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
-  activeRoleView,
-  setActiveRoleView,
   isMobileOpen,
   onCloseMobile
 }) => {
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
 
-  const superAdminMenuItems = [
-    { id: 'overview', label: 'Executive Command Center', icon: LayoutDashboard },
-    { id: 'calendar', label: 'Performance Calendar', icon: Calendar },
-    { id: 'directorates', label: 'Directorates & Depts', icon: Building2 },
-    { id: 'kpis', label: 'KPI Target Tracker', icon: Target },
-    { id: 'projects', label: 'Projects & Milestones', icon: FolderKanban },
-    { id: 'reports', label: 'Submitted Reports Feed', icon: FileText },
-    { id: 'audit', label: 'System Audit Trail', icon: Activity },
+  const ofemMenuItems = [
+    { id: 'overview',     label: 'Executive Command Center',  icon: LayoutDashboard },
+    { id: 'calendar',     label: 'Performance Calendar',       icon: Calendar },
+    { id: 'directorates', label: 'Directorates & Depts',       icon: Building2 },
+    { id: 'kpis',         label: 'KPI Target Tracker',         icon: Target },
+    { id: 'projects',     label: 'Projects & Milestones',      icon: FolderKanban },
+    { id: 'reports',      label: 'Submitted Reports Feed',     icon: FileText },
+    { id: 'audit',        label: 'System Audit Trail',         icon: Activity },
   ];
 
-  const directorMenuItems = [
-    { id: 'submit-report', label: 'Submit Directorate Report', icon: Send },
-    { id: 'submitted-reports', label: 'View Submitted Reports', icon: FileSpreadsheet },
-    { id: 'calendar', label: 'Performance Calendar', icon: Calendar },
-    { id: 'kpis', label: 'Directorate KPIs', icon: Target },
-    { id: 'projects', label: 'Directorate Projects', icon: FolderKanban },
+  const adMenuItems = [
+    { id: 'submit-report',     label: 'Submit Directorate Report', icon: Send },
+    { id: 'submitted-reports', label: 'View Submitted Reports',    icon: FileSpreadsheet },
+    { id: 'calendar',          label: 'Performance Calendar',      icon: Calendar },
+    { id: 'kpis',              label: 'Directorate KPIs',          icon: Target },
+    { id: 'projects',          label: 'Directorate Projects',      icon: FolderKanban },
   ];
 
-  const menuItems = activeRoleView === 'SUPER_ADMIN' ? superAdminMenuItems : directorMenuItems;
+  const menuItems   = currentRole === 'OFEM' ? ofemMenuItems : adMenuItems;
+  const isOFEM      = currentRole === 'OFEM';
+  const accentColor = isOFEM ? 'var(--accent-blue)' : 'var(--kingschat-gold)';
 
   const handleTabClick = (id: string) => {
     setActiveTab(id);
-    if (onCloseMobile) {
-      onCloseMobile();
-    }
+    if (onCloseMobile) onCloseMobile();
   };
 
   return (
-    <aside className={`app-sidebar ${isMobileOpen ? 'mobile-open' : ''}`} style={{
-      width: '270px',
-      borderRight: '1px solid var(--border-color)',
-      background: 'rgba(11, 15, 25, 0.98)',
-      backdropFilter: 'blur(16px)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '20px 16px',
-      height: 'calc(100vh - 72px)',
-      position: 'sticky',
-      top: '72px',
-      zIndex: 90
-    }}>
+    <aside
+      className={`app-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}
+      style={{
+        width: '270px',
+        borderRight: '1px solid var(--border-color)',
+        background: 'rgba(11, 15, 25, 0.98)',
+        backdropFilter: 'blur(16px)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px 16px',
+        height: 'calc(100vh - 72px)',
+        position: 'sticky',
+        top: '72px',
+        zIndex: 90,
+      }}
+    >
       {/* Mobile Close Button */}
       {onCloseMobile && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }} className="mobile-close-btn">
@@ -75,72 +74,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* 1-Click Role Switcher */}
+      {/* Active Portal Badge */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
-          Portal Mode View
+          Active Portal
         </div>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '4px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          padding: '4px',
+          padding: '10px 14px',
           borderRadius: '10px',
-          border: '1px solid var(--border-color)'
+          background: isOFEM ? 'rgba(99,102,241,0.12)' : 'rgba(245,158,11,0.10)',
+          border: `1px solid ${isOFEM ? 'rgba(99,102,241,0.35)' : 'rgba(245,158,11,0.35)'}`,
+          display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          <button
-            onClick={() => {
-              setActiveRoleView('SUPER_ADMIN');
-              handleTabClick('overview');
-            }}
-            style={{
-              padding: '6px 8px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeRoleView === 'SUPER_ADMIN' ? 'var(--accent-blue)' : 'transparent',
-              color: activeRoleView === 'SUPER_ADMIN' ? '#ffffff' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            👑 Super Admin
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveRoleView('DIRECTOR');
-              handleTabClick('submit-report');
-            }}
-            style={{
-              padding: '6px 8px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeRoleView === 'DIRECTOR' ? 'var(--kingschat-gold)' : 'transparent',
-              color: activeRoleView === 'DIRECTOR' ? '#000000' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px'
-            }}
-          >
-            🏢 Director
-          </button>
+          <span style={{ fontSize: '1.1rem' }}>{isOFEM ? '👑' : '🏢'}</span>
+          <div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+              {isOFEM ? 'Office of Executive Minister (OFEM)' : 'AD — Assistant Director Portal'}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 500 }}>
+              {user?.name || (isOFEM ? 'Executive Access' : 'Directorate Access')}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Section label */}
       <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 8px 8px 8px' }}>
-        {activeRoleView === 'SUPER_ADMIN' ? 'Executive Management' : 'Directorate Actions'}
+        {isOFEM ? 'Executive Management' : 'Directorate Actions'}
       </div>
 
+      {/* Nav Items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -156,8 +119,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 padding: '12px 14px',
                 borderRadius: '10px',
                 border: 'none',
-                background: isActive 
-                  ? (activeRoleView === 'SUPER_ADMIN' ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%)' : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)')
+                background: isActive
+                  ? (isOFEM
+                    ? 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(99,102,241,0.2) 100%)'
+                    : 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(59,130,246,0.2) 100%)')
                   : 'transparent',
                 color: isActive ? '#ffffff' : 'var(--text-secondary)',
                 fontWeight: isActive ? 700 : 500,
@@ -165,10 +130,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'all 0.2s ease',
-                borderLeft: isActive ? `3px solid ${activeRoleView === 'SUPER_ADMIN' ? 'var(--accent-blue)' : 'var(--kingschat-gold)'}` : '3px solid transparent'
+                borderLeft: isActive ? `3px solid ${accentColor}` : '3px solid transparent',
               }}
             >
-              <Icon style={{ width: '18px', height: '18px', color: isActive ? (activeRoleView === 'SUPER_ADMIN' ? 'var(--accent-blue)' : 'var(--kingschat-gold)') : 'var(--text-muted)' }} />
+              <Icon style={{ width: '18px', height: '18px', color: isActive ? accentColor : 'var(--text-muted)' }} />
               {item.label}
             </button>
           );
@@ -181,14 +146,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         borderRadius: '12px',
         background: 'rgba(31, 41, 55, 0.4)',
         border: '1px solid var(--border-color)',
-        marginTop: '12px'
+        marginTop: '12px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <ShieldCheck style={{ width: '16px', height: '16px', color: '#10b981' }} />
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff' }}>CCPMS Online</span>
         </div>
         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-          Mode: {activeRoleView === 'SUPER_ADMIN' ? 'Super Admin Overview' : 'Directorate Reporting Portal'}
+          Mode: {isOFEM ? 'OFEM — Office of Executive Minister' : 'AD — Assistant Director Reporting Portal'}
         </div>
       </div>
     </aside>

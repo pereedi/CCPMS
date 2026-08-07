@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, PortalRole } from '../types';
 import { api } from '../services/api';
+
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  currentRole: PortalRole | null;
   loginWithKingsChat: (token?: string) => Promise<void>;
   logout: () => void;
   isKingsChatBypassActive: boolean;
@@ -13,11 +15,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Derive the portal role from the user's DB role — handles both string and object shapes */
+const derivePortalRole = (user: User | null): PortalRole | null => {
+  if (!user) return null;
+  // role can be a plain string (from login response) or an object { name } (from /auth/me)
+  const raw: any = user.role;
+  const roleName = typeof raw === 'string'
+    ? raw.toUpperCase()
+    : (raw?.name || '').toUpperCase();
+  if (roleName === 'SUPER_ADMIN' || roleName === 'OFEM') return 'OFEM';
+  return 'AD';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Check existing saved session on initial mount or auto-login default session
+  // On mount: restore existing session only — do NOT auto-login to keep login screen visible
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('ccpms_access_token');
@@ -26,22 +40,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const res: any = await api.get('/auth/me');
           if (res.success && res.data) {
             setUser(res.data);
-            setIsLoading(false);
-            return;
           }
         } catch (err) {
-          console.warn('Session restoration failed, auto-logging in default user:', err);
+          console.warn('Session restoration failed, clearing token:', err);
+          localStorage.removeItem('ccpms_access_token');
         }
       }
-      
-      // Auto-authenticate default session in no-security mode
-      try {
-        await loginWithKingsChat('KC_SUPERADMIN');
-      } catch (e) {
-        console.warn('Default auto-login failed:', e);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     };
     initAuth();
   }, []);
@@ -49,9 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithKingsChat = async (token?: string) => {
     setIsLoading(true);
     try {
-      const payloadToken = token || 'KC_SUPERADMIN';
-      const res: any = await api.post('/auth/kingschat-login', { token: payloadToken });
-      
+      const payloadToken = token || 'KC_DIRECTOR';
+      const res: any = await api.post('/auth/kingschat', { token: payloadToken });
+
       if (res.success && res.data) {
         const { accessToken, user: authUser } = res.data;
         localStorage.setItem('ccpms_access_token', accessToken);
@@ -72,12 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const currentRole = derivePortalRole(user);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        currentRole,
         loginWithKingsChat,
         logout,
         isKingsChatBypassActive: true, // KingsChat security bypass enabled for dev/testing

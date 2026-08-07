@@ -23,8 +23,8 @@ export class AuthService {
     if (cleanToken === 'KC_SUPERADMIN') {
       return {
         id: 'KC_SUPERADMIN',
-        name: 'Super Admin User',
-        email: 'admin@ccpms.org',
+        name: 'OFEM Executive',
+        email: 'ofem@ccpms.org',
         phone: '+2348000000001',
         avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       };
@@ -33,8 +33,8 @@ export class AuthService {
     if (cleanToken === 'KC_DIRECTOR') {
       return {
         id: 'KC_DIRECTOR',
-        name: 'Directorate Director',
-        email: 'director.tech@ccpms.org',
+        name: 'AD Director',
+        email: 'ad.director@ccpms.org',
         phone: '+2348000000002',
         avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
       };

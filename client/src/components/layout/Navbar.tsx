@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Shield, Bell, User, LogOut, Lock, KeyRound, Sparkles, ChevronDown, Menu, X } from 'lucide-react';
+import { Shield, Bell, LogOut, KeyRound, ChevronDown, Menu, X, Crown, Building2 } from 'lucide-react';
 
 interface NavbarProps {
   onOpenNotifications: () => void;
-  onOpenLoginModal: () => void;
   onToggleMobileMenu?: () => void;
   isMobileMenuOpen?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
-  onOpenLoginModal,
   onToggleMobileMenu,
-  isMobileMenuOpen
+  isMobileMenuOpen,
 }) => {
-  const { user, isAuthenticated, logout, isKingsChatBypassActive } = useAuth();
+  const { user, isAuthenticated, logout, currentRole } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+
+  const isOFEM = currentRole === 'OFEM';
 
   return (
     <header className="navbar-container" style={{
@@ -30,9 +30,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       padding: '0 24px',
       position: 'sticky',
       top: 0,
-      zIndex: 100
+      zIndex: 100,
     }}>
-      {/* Left Section: Mobile Hamburger Toggle & Brand Title */}
+
+      {/* Left: Hamburger + Brand */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {onToggleMobileMenu && (
           <button
@@ -41,28 +42,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
             title="Toggle Navigation Menu"
           >
-            {isMobileMenuOpen ? <X style={{ width: '20px', height: '20px', color: '#f87171' }} /> : <Menu style={{ width: '20px', height: '20px', color: '#60a5fa' }} />}
+            {isMobileMenuOpen
+              ? <X style={{ width: '20px', height: '20px', color: '#f87171' }} />
+              : <Menu style={{ width: '20px', height: '20px', color: '#60a5fa' }} />}
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Menu</span>
           </button>
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
+            width: '40px', height: '40px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-            flexShrink: 0
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', flexShrink: 0,
           }}>
             <Shield style={{ width: '22px', height: '22px', color: '#ffffff' }} />
           </div>
           <div>
             <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              MISSION CONTROL <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>CCPMS</span>
+              MISSION CONTROL{' '}
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                CCPMS
+              </span>
             </h1>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               Command & Control Performance Management System
@@ -71,31 +72,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Security Status & Right Actions */}
+      {/* Right: Role Badge + Notifications + User */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        {/* KingsChat Security Mode Indicator Badge */}
-        <div 
-          onClick={onOpenLoginModal}
-          style={{
-            cursor: 'pointer',
-            padding: '6px 12px',
-            borderRadius: '9999px',
-            background: isKingsChatBypassActive ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-            border: `1px solid ${isKingsChatBypassActive ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            color: isKingsChatBypassActive ? '#fbbf24' : '#34d399'
-          }}
-          title="Click to configure KingsChat mode"
-        >
-          <Sparkles style={{ width: '13px', height: '13px' }} />
-          <span>{isKingsChatBypassActive ? 'KingsChat Quick Login' : 'KingsChat OAuth'}</span>
-        </div>
 
-        {/* Notifications Icon Button */}
+        {/* Role Badge */}
+        {isAuthenticated && (
+          <div style={{
+            padding: '5px 12px', borderRadius: '9999px',
+            background: isOFEM ? 'rgba(99,102,241,0.12)' : 'rgba(245,158,11,0.10)',
+            border: `1px solid ${isOFEM ? 'rgba(99,102,241,0.35)' : 'rgba(245,158,11,0.35)'}`,
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontSize: '0.72rem', fontWeight: 700,
+            color: isOFEM ? '#c084fc' : '#fbbf24',
+          }}>
+            {isOFEM
+              ? <Crown style={{ width: '12px', height: '12px' }} />
+              : <Building2 style={{ width: '12px', height: '12px' }} />}
+            <span>{isOFEM ? 'OFEM' : 'AD Portal'}</span>
+          </div>
+        )}
+
+        {/* Notifications */}
         {isAuthenticated && (
           <button
             onClick={onOpenNotifications}
@@ -104,32 +101,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Bell style={{ width: '18px', height: '18px' }} />
             <span style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--accent-rose)'
+              position: 'absolute', top: '8px', right: '8px',
+              width: '8px', height: '8px', borderRadius: '50%',
+              backgroundColor: 'var(--accent-rose)',
             }} />
           </button>
         )}
 
-        {/* User Profile / KingsChat Login Button */}
+        {/* User Profile Dropdown */}
         {isAuthenticated && user ? (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                display: 'flex', alignItems: 'center', gap: '8px',
                 background: 'rgba(31, 41, 55, 0.7)',
                 border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '6px 12px',
-                cursor: 'pointer',
-                color: 'var(--text-primary)'
+                borderRadius: '12px', padding: '6px 12px',
+                cursor: 'pointer', color: 'var(--text-primary)',
               }}
             >
               <img
@@ -146,36 +135,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {showDropdown && (
               <div className="glass-panel animate-fade-in" style={{
-                position: 'absolute',
-                top: '48px',
-                right: 0,
-                width: '240px',
-                padding: '12px',
-                zIndex: 1000,
-                background: '#111827'
+                position: 'absolute', top: '48px', right: 0,
+                width: '240px', padding: '12px', zIndex: 1000, background: '#111827',
               }}>
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>{user.name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{user.email || user.kingschatUserId}</div>
+                  <div style={{
+                    marginTop: '6px', fontSize: '0.7rem', fontWeight: 700,
+                    color: isOFEM ? '#c084fc' : '#fbbf24',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                  }}>
+                    {isOFEM ? '👑 Office of Executive Minister (OFEM)' : '🏢 AD — Assistant Director'}
+                  </div>
                 </div>
-                
-                <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    onOpenLoginModal();
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{ width: '100%', justifyContent: 'flex-start', marginBottom: '6px' }}
-                >
-                  <KeyRound style={{ width: '14px', height: '14px' }} />
-                  Switch KingsChat Account
-                </button>
 
                 <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    logout();
-                  }}
+                  onClick={() => { setShowDropdown(false); logout(); }}
                   className="btn btn-secondary btn-sm"
                   style={{ width: '100%', justifyContent: 'flex-start', color: '#f87171' }}
                 >
@@ -185,12 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
-        ) : (
-          <button onClick={onOpenLoginModal} className="btn btn-kingschat" style={{ padding: '8px 14px', fontSize: '0.8rem' }}>
-            <Shield style={{ width: '16px', height: '16px' }} />
-            Sign In with KingsChat
-          </button>
-        )}
+        ) : null}
       </div>
     </header>
   );

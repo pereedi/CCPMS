@@ -49,12 +49,12 @@ export const SubmittedReportsView: React.FC = () => {
     try {
       const res: any = await api.post(`/reports/${reportId}/approve`, {
         action: 'APPROVE',
-        comments: 'Approved by Super Admin'
+        comments: 'Approved by OFEM'
       });
       if (res.success) {
         setActionFeedback({
           id: reportId,
-          msg: '✅ Directorate Report successfully APPROVED by Super Admin!',
+          msg: '✅ Directorate Report successfully APPROVED by OFEM!',
           type: 'success'
         });
         await fetchSubmittedReports();
@@ -131,7 +131,7 @@ export const SubmittedReportsView: React.FC = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <ShieldCheck style={{ width: '18px', height: '18px', color: 'var(--kingschat-gold)' }} />
-            <span className="badge badge-role">SUPER ADMIN EXECUTIVE APPROVALS</span>
+            <span className="badge badge-role">OFEM EXECUTIVE APPROVALS</span>
           </div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>Submitted Directorate Reports Feed</h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -308,7 +308,7 @@ export const SubmittedReportsView: React.FC = () => {
                   </span>
                   {isApproved(selectedReport.report.status) ? (
                     <span className="badge badge-excellent" style={{ fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
-                      <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED BY SUPER ADMIN
+                      <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED BY OFEM
                     </span>
                   ) : (
                     <span className="badge" style={{ fontSize: '0.8rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>

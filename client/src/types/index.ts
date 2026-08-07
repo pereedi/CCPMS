@@ -1,3 +1,6 @@
+/** Portal role derived from the user's DB role — drives role-based routing */
+export type PortalRole = 'OFEM' | 'AD';
+
 export interface User {
   id: string;
   kingschatUserId: string;
