@@ -63,12 +63,46 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       }
     }
 
-    // ── PROTOTYPE BYPASS — if the JWT belongs to a mock user, skip DB entirely ──
-    if (decoded?.userId && MOCK_USERS[decoded.userId]) {
-      req.user = MOCK_USERS[decoded.userId];
-      return next();
+    // ── PROTOTYPE BYPASS — resolve mock user without full DB role join ────────
+    if (decoded?.userId && (MOCK_USERS[decoded.userId] || decoded.kingschatUserId?.startsWith('KC_'))) {
+      // Try to find real seeded user by kingschatUserId for correct FK IDs
+      try {
+        const kcId = decoded.kingschatUserId;
+        const dbUser = kcId ? await prisma.user.findUnique({
+          where: { kingschatUserId: kcId },
+          include: { role: true, directorate: true },
+        }) : null;
+
+        if (dbUser) {
+          req.user = {
+            id:              dbUser.id,
+            kingschatUserId: dbUser.kingschatUserId,
+            name:            kcId === 'KC_SUPERADMIN' ? 'OFEM Executive' : 'AD Director',
+            email:           dbUser.email,
+            profilePhoto:    kcId === 'KC_SUPERADMIN'
+              ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+              : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            status:          'ACTIVE',
+            role:            dbUser.role?.name || decoded.role,
+            permissions:     kcId === 'KC_SUPERADMIN'
+              ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
+              : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+            directorate:     dbUser.directorate
+              ? { id: dbUser.directorate.id, name: dbUser.directorate.name, code: dbUser.directorate.code }
+              : null,
+          };
+          return next();
+        }
+      } catch (_) { /* DB not ready */ }
+
+      // Fall back to hardcoded mock if DB lookup fails
+      if (MOCK_USERS[decoded.userId]) {
+        req.user = MOCK_USERS[decoded.userId];
+        return next();
+      }
     }
     // ─────────────────────────────────────────────────────────────────────────────
+
 
     let user: any = null;
     if (decoded?.userId) {

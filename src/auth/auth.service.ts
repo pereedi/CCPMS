@@ -96,29 +96,72 @@ export class AuthService {
       cleanToken === 'KC_DIRECTOR' ||
       cleanToken.startsWith('KC_');
 
-    // ── FULL DB BYPASS for prototype / testing phase ──────────────────────────
+    // ── PROTOTYPE BYPASS for mock KC_ tokens ─────────────────────────────────
     if (isMockToken) {
       const isOFEM = cleanToken === 'KC_SUPERADMIN';
-      const mockUser = {
-        id:              isOFEM ? 'mock-ofem-001' : 'mock-ad-001',
-        kingschatUserId: cleanToken,
-        name:            isOFEM ? 'OFEM Executive' : 'AD Director',
-        email:           isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org',
-        phone:           isOFEM ? '+2348000000001' : '+2348000000002',
-        profilePhoto:    isOFEM
-          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-          : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        status:          'ACTIVE',
-        role:            isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR',
-        permissions:     isOFEM
-          ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
-          : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
-        directorate:     isOFEM
-          ? null
-          : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' },
-        department:      null,
-        lastLogin:       new Date().toISOString(),
-      };
+
+      // Try to resolve the real seeded user from DB so FK constraints work
+      let dbUser: any = null;
+      try {
+        dbUser = await prisma.user.findUnique({
+          where: { kingschatUserId: cleanToken },
+          include: {
+            role: true,
+            directorate: true,
+            department: true,
+          },
+        });
+      } catch (_) {
+        // DB not ready yet — fall through to hardcoded mock
+      }
+
+      let mockUser: any;
+
+      if (dbUser) {
+        // Use real DB record — this ensures authorId / directorateId FKs work
+        mockUser = {
+          id:              dbUser.id,
+          kingschatUserId: dbUser.kingschatUserId,
+          name:            isOFEM ? 'OFEM Executive' : 'AD Director',
+          email:           dbUser.email,
+          phone:           dbUser.phone,
+          profilePhoto:    isOFEM
+            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          status:          'ACTIVE',
+          role:            dbUser.role?.name || (isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR'),
+          permissions:     isOFEM
+            ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
+            : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+          directorate:     dbUser.directorate
+            ? { id: dbUser.directorate.id, name: dbUser.directorate.name, code: dbUser.directorate.code }
+            : null,
+          department:      null,
+          lastLogin:       new Date().toISOString(),
+        };
+      } else {
+        // DB not seeded yet — return pure mock (report submission won't work until seeded)
+        mockUser = {
+          id:              isOFEM ? 'mock-ofem-001' : 'mock-ad-001',
+          kingschatUserId: cleanToken,
+          name:            isOFEM ? 'OFEM Executive' : 'AD Director',
+          email:           isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org',
+          phone:           isOFEM ? '+2348000000001' : '+2348000000002',
+          profilePhoto:    isOFEM
+            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          status:          'ACTIVE',
+          role:            isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR',
+          permissions:     isOFEM
+            ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
+            : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+          directorate:     isOFEM
+            ? null
+            : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' },
+          department:      null,
+          lastLogin:       new Date().toISOString(),
+        };
+      }
 
       const jwtPayload = {
         userId:          mockUser.id,
@@ -129,10 +172,11 @@ export class AuthService {
       const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
       const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
 
-      logger.info(`[AuthService] PROTOTYPE BYPASS — mock login for: ${cleanToken} (${mockUser.role})`);
+      logger.info(`[AuthService] PROTOTYPE BYPASS — mock login for: ${cleanToken} (${mockUser.role}) userId=${mockUser.id}`);
       return { accessToken, refreshToken, user: mockUser };
     }
     // ─────────────────────────────────────────────────────────────────────────
+
 
     const kcProfile = await this.verifyKingsChatToken(token);
 
