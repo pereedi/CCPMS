@@ -75,7 +75,8 @@ export class ReportsController {
       }
       const actStr = String(action).toUpperCase();
       const normalizedAction: 'APPROVE' | 'REJECT' = actStr.includes('APPROVE') ? 'APPROVE' : 'REJECT';
-      const approverRole = req.user?.role?.name || 'SUPER_ADMIN';
+      const rawRole = req.user?.role;
+      const approverRole = (typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name) || 'SUPER_ADMIN';
 
       const updated = await reportsService.approveReportByDirector(id, req.user!.id, normalizedAction, comments, approverRole);
       return sendSuccess(res, updated, `Report ${normalizedAction === 'APPROVE' ? 'approved' : 'rejected'} successfully by ${approverRole.replace('_', ' ')}`);

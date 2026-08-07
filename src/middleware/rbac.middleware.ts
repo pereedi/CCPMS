@@ -2,13 +2,17 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth.middleware';
 import { sendError } from '../utils/response';
 
+/** Resolve role name from either a plain string or a role object */
+const getRoleName = (role: AuthRequest['user'] extends undefined ? never : NonNullable<AuthRequest['user']>['role']): string =>
+  typeof role === 'string' ? role : (role as any)?.name || '';
+
 export function requireRole(...allowedRoles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return sendError(res, 'Unauthenticated user', 401);
     }
 
-    if (allowedRoles.includes('ALL') || allowedRoles.includes(req.user.role.name)) {
+    if (allowedRoles.includes('ALL') || allowedRoles.includes(getRoleName(req.user.role))) {
       return next();
     }
 
@@ -23,7 +27,7 @@ export function requirePermission(...requiredPermissions: string[]) {
     }
 
     // Super Admin bypasses permission checks
-    if (req.user.role.name === 'SUPER_ADMIN') {
+    if (getRoleName(req.user.role) === 'SUPER_ADMIN') {
       return next();
     }
 
