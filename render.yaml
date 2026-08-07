@@ -3,7 +3,7 @@ services:
     name: mission-control-system
     runtime: node
     buildCommand: npm install --include=dev && npm run build
-    startCommand: npm start
+    startCommand: npx prisma db push && npm run seed && npm start
     envVars:
       - key: DATABASE_URL
         value: file:./dev.db
@@ -11,3 +11,5 @@ services:
         value: ccpms_production_secret_jwt_key_2026_antigravity
       - key: NODE_ENV
         value: production
+      - key: DEV_MOCK_KINGSCHAT
+        value: "true"

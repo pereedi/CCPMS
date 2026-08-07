@@ -83,9 +83,57 @@ export class AuthService {
   }
 
   /**
-   * Synchronize user profile in local DB and issue local JWT
+   * Synchronize user profile in local DB and issue local JWT.
+   * In prototype/testing mode (DEV_MOCK_KINGSCHAT or KC_ tokens), the DB is
+   * bypassed entirely — returning a signed JWT and mock user without needing
+   * any seed data in the database.
    */
   async authenticateWithKingsChat(token: string) {
+    const cleanToken = token ? token.trim() : 'KC_DIRECTOR';
+    const isMockToken =
+      ENV.DEV_MOCK_KINGSCHAT ||
+      cleanToken === 'KC_SUPERADMIN' ||
+      cleanToken === 'KC_DIRECTOR' ||
+      cleanToken.startsWith('KC_');
+
+    // ── FULL DB BYPASS for prototype / testing phase ──────────────────────────
+    if (isMockToken) {
+      const isOFEM = cleanToken === 'KC_SUPERADMIN';
+      const mockUser = {
+        id:              isOFEM ? 'mock-ofem-001' : 'mock-ad-001',
+        kingschatUserId: cleanToken,
+        name:            isOFEM ? 'OFEM Executive' : 'AD Director',
+        email:           isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org',
+        phone:           isOFEM ? '+2348000000001' : '+2348000000002',
+        profilePhoto:    isOFEM
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+          : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        status:          'ACTIVE',
+        role:            isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR',
+        permissions:     isOFEM
+          ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
+          : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+        directorate:     isOFEM
+          ? null
+          : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' },
+        department:      null,
+        lastLogin:       new Date().toISOString(),
+      };
+
+      const jwtPayload = {
+        userId:          mockUser.id,
+        kingschatUserId: mockUser.kingschatUserId,
+        role:            mockUser.role,
+      };
+
+      const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
+      const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
+
+      logger.info(`[AuthService] PROTOTYPE BYPASS — mock login for: ${cleanToken} (${mockUser.role})`);
+      return { accessToken, refreshToken, user: mockUser };
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const kcProfile = await this.verifyKingsChatToken(token);
 
     // Find existing user or create
