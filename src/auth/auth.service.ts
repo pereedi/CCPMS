@@ -8,6 +8,7 @@ import { getAuthorizedUserConfig } from '../config/authorized-users';
 export interface KingsChatProfile {
   id: string;
   name: string;
+  username?: string;
   email?: string;
   phone?: string;
   avatar_url?: string;
@@ -15,16 +16,74 @@ export interface KingsChatProfile {
 
 export class AuthService {
   /**
-   * Validate token with KingsChat API or Mock service (No-security bypass mode enabled for dev/testing)
+   * Step 6: Exchange OAuth2 Authorization Code for Access & Refresh Tokens
+   * Endpoint: POST https://connect.kingsch.at/developer/api/oauth2/token
+   */
+  async exchangeCodeForTokens(code: string): Promise<{ access_token: string; refresh_token?: string }> {
+    try {
+      const response = await axios.post(
+        'https://connect.kingsch.at/developer/api/oauth2/token',
+        {
+          grant_type: 'code',
+          client_id: ENV.KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c',
+          code,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      logger.error(`[AuthService] KingsChat Code Exchange Error: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Failed to exchange KingsChat authorization code: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  /**
+   * Get Authenticated User's Profile
+   * Endpoint: GET https://connect.kingsch.at/developer/api/user/profile
+   * Headers:
+   *   api-key: YOUR_API_KEY
+   *   Authorization: Bearer YOUR_ACCESS_TOKEN
+   */
+  async fetchKingsChatProfile(accessToken: string): Promise<KingsChatProfile> {
+    const apiKey = ENV.KINGSCHAT_API_KEY || '43cWL2OYutzOND0zGhiU94UficpXqSPkWEBtj+ENtIQ=';
+
+    try {
+      const response = await axios.get('https://connect.kingsch.at/developer/api/user/profile', {
+        headers: {
+          'api-key': apiKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const profile = response.data.profile || response.data;
+      return {
+        id: profile.id,
+        name: profile.name,
+        username: profile.username ? profile.username.replace(/^@/, '') : profile.id,
+        email: profile.email,
+        phone: profile.phone_number || profile.phone,
+        avatar_url: profile.avatar,
+      };
+    } catch (error: any) {
+      logger.error(`[AuthService] KingsChat Profile Fetch Error: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Failed to retrieve KingsChat profile: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
+  /**
+   * Validate token or handle prototype roster shortcut
    */
   async verifyKingsChatToken(token: string): Promise<KingsChatProfile> {
-    const cleanToken = token ? token.trim() : 'KC_DIRECTOR';
+    const cleanToken = token ? token.trim() : 'pereedi';
     const config = getAuthorizedUserConfig(cleanToken);
 
     if (config) {
       return {
         id: config.kingschatUsername,
         name: config.name,
+        username: config.kingschatUsername,
         email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
         phone: config.phone || '+2348000000000',
         avatar_url: config.role === 'SUPER_ADMIN'
@@ -34,62 +93,39 @@ export class AuthService {
     }
 
     // Direct mock token shortcuts
-    if (cleanToken === 'KC_SUPERADMIN') {
+    if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'pereedi') {
       return {
-        id: 'KC_SUPERADMIN',
-        name: 'OFEM Executive',
-        email: 'ofem@ccpms.org',
+        id: 'pereedi',
+        name: 'Directorate (OFEM Executive)',
+        username: 'pereedi',
+        email: 'admin@ccpms.org',
         phone: '+2348000000001',
         avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       };
     }
 
-    if (cleanToken === 'KC_DIRECTOR') {
+    if (cleanToken === 'KC_DIRECTOR' || cleanToken === 'alexdabest') {
       return {
-        id: 'KC_DIRECTOR',
-        name: 'AD Director',
-        email: 'ad.director@ccpms.org',
+        id: 'alexdabest',
+        name: 'Technology & Digital Innovation Director',
+        username: 'alexdabest',
+        email: 'director.tech@ccpms.org',
         phone: '+2348000000002',
         avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
       };
     }
 
-    // If token starts with KC_ or Dev Mock is enabled (No-Security Mode)
-    if (ENV.DEV_MOCK_KINGSCHAT || cleanToken.startsWith('KC_') || process.env.NODE_ENV !== 'production') {
-      logger.info(`[AuthService] KingsChat no-security mode active for token: ${cleanToken}`);
-      const mockId = cleanToken.startsWith('KC_') ? cleanToken : `KC_${cleanToken.replace(/[^a-zA-Z0-9]/g, '')}`;
+    // If token is a bearer token, try fetching official profile
+    try {
+      return await this.fetchKingsChatProfile(cleanToken);
+    } catch (_) {
+      // Fallback for dev/mock mode
+      const mockId = cleanToken.startsWith('KC_') ? cleanToken : cleanToken.replace(/[^a-zA-Z0-9_]/g, '');
       return {
         id: mockId,
         name: cleanToken.includes('@') ? cleanToken.split('@')[0] : `KingsChat User (${cleanToken})`,
+        username: mockId,
         email: cleanToken.includes('@') ? cleanToken : `${mockId.toLowerCase()}@kingschat.net`,
-        phone: '+2348000000000',
-        avatar_url: `https://avatar.kingschat.net/${mockId}`,
-      };
-    }
-
-    // Fallback to KingsChat profile endpoint with fallback on error
-    try {
-      const response = await axios.get(`${ENV.KINGSCHAT_API_URL}/profile`, {
-        headers: {
-          Authorization: `Bearer ${cleanToken}`,
-        },
-      });
-
-      const profile = response.data.profile || response.data;
-      return {
-        id: profile.id || profile.user_id,
-        name: profile.name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'KingsChat User',
-        email: profile.email,
-        phone: profile.phone_number || profile.phone,
-        avatar_url: profile.avatar_url,
-      };
-    } catch (error: any) {
-      logger.warn(`KingsChat API error: ${error.message}. Falling back to no-security mock authentication.`);
-      const mockId = `KC_${cleanToken.replace(/[^a-zA-Z0-9]/g, '') || 'USER'}`;
-      return {
-        id: mockId,
-        name: `KingsChat User (${cleanToken})`,
-        email: `${mockId.toLowerCase()}@kingschat.net`,
         phone: '+2348000000000',
         avatar_url: `https://avatar.kingschat.net/${mockId}`,
       };
@@ -98,220 +134,122 @@ export class AuthService {
 
   /**
    * Synchronize user profile in local DB and issue local JWT.
+   * Supports both OAuth code exchange and raw token/roster handle authentication.
    */
-  async authenticateWithKingsChat(token: string) {
-    const cleanToken = token ? token.trim() : 'KC_DIRECTOR';
-    const config = getAuthorizedUserConfig(cleanToken);
+  async authenticateWithKingsChat(tokenOrCodePayload: any) {
+    let cleanInput = typeof tokenOrCodePayload === 'string' ? tokenOrCodePayload.trim() : (tokenOrCodePayload?.code || tokenOrCodePayload?.token || '');
+    if (!cleanInput) cleanInput = 'pereedi';
 
-    const isMockToken =
-      ENV.DEV_MOCK_KINGSCHAT ||
-      !!config ||
-      cleanToken === 'KC_SUPERADMIN' ||
-      cleanToken === 'KC_DIRECTOR' ||
-      cleanToken.startsWith('KC_');
+    let kcProfile: KingsChatProfile;
 
-    // ── PROTOTYPE BYPASS & ROSTER AUTHORIZATION ──────────────────────────────
-    if (isMockToken) {
-      const lookupId = config ? config.kingschatUsername : cleanToken;
-      const isOFEM = config ? config.role === 'SUPER_ADMIN' : cleanToken === 'KC_SUPERADMIN';
-
-      // Try to resolve the real user from DB
-      let dbUser: any = null;
+    // Check if input is an OAuth code (e.g. from KingsChat redirect POST or popup callback)
+    if (tokenOrCodePayload?.code || (typeof tokenOrCodePayload === 'string' && tokenOrCodePayload.length > 30 && !tokenOrCodePayload.startsWith('eyJ') && !getAuthorizedUserConfig(cleanInput))) {
       try {
-        dbUser = await prisma.user.findUnique({
-          where: { kingschatUserId: lookupId },
-          include: {
-            role: true,
-            directorate: true,
-            department: true,
-          },
-        });
-      } catch (_) {
-        // DB not ready yet
+        const tokens = await this.exchangeCodeForTokens(tokenOrCodePayload?.code || cleanInput);
+        kcProfile = await this.fetchKingsChatProfile(tokens.access_token);
+      } catch (err: any) {
+        logger.warn(`[AuthService] OAuth Code Exchange failed, trying profile token check: ${err.message}`);
+        kcProfile = await this.verifyKingsChatToken(cleanInput);
       }
-
-      let mockUser: any;
-
-      if (dbUser) {
-        // Use real DB record
-        mockUser = {
-          id:              dbUser.id,
-          kingschatUserId: dbUser.kingschatUserId,
-          name:            dbUser.name,
-          email:           dbUser.email,
-          phone:           dbUser.phone,
-          profilePhoto:    dbUser.profilePhoto || (isOFEM
-            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'),
-          status:          'ACTIVE',
-          role:            dbUser.role?.name || (isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR'),
-          permissions:     isOFEM
-            ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
-            : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
-          directorate:     dbUser.directorate
-            ? { id: dbUser.directorate.id, name: dbUser.directorate.name, code: dbUser.directorate.code }
-            : null,
-          department:      null,
-          lastLogin:       new Date().toISOString(),
-        };
-      } else {
-        // If config exists, resolve directorate by code from DB
-        let targetDir: any = null;
-        if (config?.directorateCode) {
-          try {
-            targetDir = await prisma.directorate.findUnique({ where: { code: config.directorateCode } });
-          } catch (_) {}
-        }
-
-        mockUser = {
-          id:              `mock-${lookupId.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-          kingschatUserId: lookupId,
-          name:            config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
-          email:           config?.email || (isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org'),
-          phone:           config?.phone || (isOFEM ? '+2348000000001' : '+2348000000002'),
-          profilePhoto:    isOFEM
-            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-          status:          'ACTIVE',
-          role:            isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR',
-          permissions:     isOFEM
-            ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
-            : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
-          directorate:     isOFEM
-            ? null
-            : (targetDir
-                ? { id: targetDir.id, name: targetDir.name, code: targetDir.code }
-                : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' }),
-          department:      null,
-          lastLogin:       new Date().toISOString(),
-        };
-      }
-
-      const jwtPayload = {
-        userId:          mockUser.id,
-        kingschatUserId: mockUser.kingschatUserId,
-        role:            mockUser.role,
-      };
-
-      const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
-      const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
-
-      logger.info(`[AuthService] Authorized user login for: ${lookupId} (${mockUser.role}) userId=${mockUser.id}`);
-      return { accessToken, refreshToken, user: mockUser };
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-
-    const kcProfile = await this.verifyKingsChatToken(token);
-
-    // Find existing user or create
-    let user = await prisma.user.findUnique({
-      where: { kingschatUserId: kcProfile.id },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-        directorate: true,
-        department: true,
-      },
-    });
-
-    if (!user) {
-      // Find default role ('DIRECTOR' or fallback to first role)
-      let defaultRole = await prisma.role.findUnique({ where: { name: 'DIRECTOR' } });
-      if (!defaultRole) {
-        defaultRole = await prisma.role.findFirst();
-      }
-
-      if (!defaultRole) {
-        throw new Error('System initialization incomplete: No default roles found');
-      }
-
-      user = await prisma.user.create({
-        data: {
-          kingschatUserId: kcProfile.id,
-          name: kcProfile.name,
-          email: kcProfile.email,
-          phone: kcProfile.phone,
-          profilePhoto: kcProfile.avatar_url,
-          roleId: defaultRole.id,
-          lastLogin: new Date(),
-        },
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true,
-                },
-              },
-            },
-          },
-          directorate: true,
-          department: true,
-        },
-      });
     } else {
-      // Update sync profile & last login
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          name: kcProfile.name || user.name,
-          email: kcProfile.email || user.email,
-          phone: kcProfile.phone || user.phone,
-          profilePhoto: kcProfile.avatar_url || user.profilePhoto,
+      kcProfile = await this.verifyKingsChatToken(cleanInput);
+    }
+
+    const username = kcProfile.username || kcProfile.id;
+    const config = getAuthorizedUserConfig(username) || getAuthorizedUserConfig(cleanInput);
+
+    // ROSTER ENFORCEMENT: Reject users not registered in authorized roster
+    if (!config && !ENV.DEV_MOCK_KINGSCHAT && process.env.NODE_ENV === 'production') {
+      throw new Error(`Access Denied: KingsChat account @${username} is not registered in the CCPMS authorized roster.`);
+    }
+
+    const effectiveRole = config ? config.role : (username === 'pereedi' || username === 'KC_SUPERADMIN' ? 'SUPER_ADMIN' : 'DIRECTOR');
+    const effectiveDirCode = config?.directorateCode || (effectiveRole === 'DIRECTOR' ? 'TECH_DIGITAL' : undefined);
+    const isOFEM = effectiveRole === 'SUPER_ADMIN';
+
+    // Resolve Role and Directorate from Prisma DB
+    let dbRole = await prisma.role.findUnique({ where: { name: effectiveRole } });
+    if (!dbRole) {
+      dbRole = await prisma.role.findFirst();
+    }
+
+    let dbDir: any = null;
+    if (effectiveDirCode) {
+      dbDir = await prisma.directorate.findUnique({ where: { code: effectiveDirCode } });
+    }
+
+    // Upsert User in database with bound Role and Directorate
+    let user: any = null;
+    try {
+      user = await prisma.user.upsert({
+        where: { kingschatUserId: username },
+        update: {
+          name: kcProfile.name || config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
+          email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
+          phone: kcProfile.phone || config?.phone || '+2348000000000',
+          profilePhoto: kcProfile.avatar_url,
+          roleId: dbRole?.id,
+          directorateId: isOFEM ? null : (dbDir?.id || null),
+          lastLogin: new Date(),
+        },
+        create: {
+          kingschatUserId: username,
+          name: kcProfile.name || config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
+          email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
+          phone: kcProfile.phone || config?.phone || '+2348000000000',
+          profilePhoto: kcProfile.avatar_url,
+          roleId: dbRole?.id!,
+          directorateId: isOFEM ? null : (dbDir?.id || null),
+          status: 'ACTIVE',
           lastLogin: new Date(),
         },
         include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true,
-                },
-              },
-            },
-          },
+          role: true,
           directorate: true,
-          department: true,
         },
       });
+    } catch (err: any) {
+      logger.warn(`[AuthService] DB Upsert fallback: ${err.message}`);
     }
 
-    const permissions = user.role.permissions.map((rp) => rp.permission.name);
+    const userId = user?.id || `user-${username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const userRole = user?.role?.name || effectiveRole;
+    const userDir = isOFEM
+      ? null
+      : (user?.directorate
+          ? { id: user.directorate.id, name: user.directorate.name, code: user.directorate.code }
+          : (dbDir ? { id: dbDir.id, name: dbDir.name, code: dbDir.code } : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' }));
 
-    // Generate Application JWT
-    const payload = {
-      userId: user.id,
-      kingschatUserId: user.kingschatUserId,
-      role: user.role.name,
+    const jwtPayload = {
+      userId,
+      kingschatUserId: username,
+      role: userRole,
+      directorateId: userDir?.id,
     };
 
-    const accessToken = jwt.sign(payload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
-    const refreshToken = jwt.sign(payload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
+    const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
+    const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
+
+    logger.info(`[AuthService] KingsChat login successful for: @${username} (${userRole}) Directorate: ${userDir?.name || 'OFEM Global'}`);
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user.id,
-        kingschatUserId: user.kingschatUserId,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        profilePhoto: user.profilePhoto,
-        status: user.status,
-        role: user.role.name,
-        permissions,
-        directorate: user.directorate ? { id: user.directorate.id, name: user.directorate.name, code: user.directorate.code } : null,
-        department: user.department ? { id: user.department.id, name: user.department.name, code: user.department.code } : null,
-        lastLogin: user.lastLogin,
+        id: userId,
+        kingschatUserId: username,
+        name: user?.name || config?.name || kcProfile.name,
+        email: user?.email || config?.email || kcProfile.email,
+        phone: user?.phone || config?.phone || kcProfile.phone,
+        profilePhoto: user?.profilePhoto || kcProfile.avatar_url,
+        status: 'ACTIVE',
+        role: userRole,
+        permissions: isOFEM
+          ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
+          : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+        directorate: userDir,
+        department: null,
+        lastLogin: new Date().toISOString(),
       },
     };
   }

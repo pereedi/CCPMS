@@ -51,7 +51,7 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
       const redirectUri = window.location.origin + '/kingschat-callback';
       const scopes = encodeURIComponent(JSON.stringify(['user_info']));
 
-      const oauthUrl = `https://accounts.kingschat.online/log-in?client_id=${clientId}&scopes=${scopes}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const oauthUrl = `https://accounts.kingschat.online/log-in?clientId=${clientId}&origin=${encodeURIComponent(redirectUri)}`;
 
       const width = 500;
       const height = 650;

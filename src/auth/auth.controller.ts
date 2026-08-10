@@ -8,12 +8,43 @@ const authService = new AuthService();
 export class AuthController {
   async loginWithKingsChat(req: Request, res: Response) {
     try {
-      const token = req.body?.token || 'KC_DIRECTOR';
-
-      const result = await authService.authenticateWithKingsChat(token);
+      const payload = req.body;
+      const result = await authService.authenticateWithKingsChat(payload);
       return sendSuccess(res, result, 'KingsChat authentication successful');
     } catch (error: any) {
       return sendError(res, error.message || 'Authentication failed', 401);
+    }
+  }
+
+  async handleKingsChatCallback(req: Request, res: Response) {
+    try {
+      const { code, origin } = req.body;
+      if (!code) {
+        return res.status(400).send('Authorization code missing in callback request');
+      }
+
+      const result = await authService.authenticateWithKingsChat({ code, origin });
+      // Return HTML page that posts token back to client window or redirects
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>KingsChat Callback</title></head>
+          <body style="background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding-top:50px;">
+            <h2>KingsChat Authentication Complete</h2>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'KINGSCHAT_OAUTH_SUCCESS', token: "${result.accessToken}" }, '*');
+                window.close();
+              } else {
+                localStorage.setItem('ccpms_access_token', "${result.accessToken}");
+                window.location.href = "${origin || '/'}";
+              }
+            </script>
+          </body>
+        </html>
+      `);
+    } catch (error: any) {
+      return res.status(401).send(`KingsChat Authentication Error: ${error.message}`);
     }
   }
 
