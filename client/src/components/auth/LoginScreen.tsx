@@ -33,7 +33,7 @@ export const LoginScreen: React.FC = () => {
       const redirectUri = window.location.origin + '/kingschat-callback';
       const scopes = encodeURIComponent(JSON.stringify(['user_info']));
 
-      const oauthUrl = `https://accounts.kingschat.online/log-in?clientId=${clientId}&origin=${encodeURIComponent(redirectUri)}`;
+      const oauthUrl = `https://accounts.kingsch.at/?client_id=${clientId}&scopes=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
       const width = 500;
       const height = 650;
