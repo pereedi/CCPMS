@@ -9,24 +9,70 @@ export const LoginScreen: React.FC = () => {
   const [loadingFor, setLoadingFor] = useState<'OFEM' | 'AD' | 'CUSTOM' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLogin = async (token: string, role: 'OFEM' | 'AD' | 'CUSTOM') => {
+  const handleCustomLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customToken.trim()) return;
     setLoading(true);
-    setLoadingFor(role);
+    setLoadingFor('CUSTOM');
     setErrorMsg('');
     try {
-      await loginWithKingsChat(token);
+      await loginWithKingsChat(customToken.trim());
     } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed. Please try again.');
+      setErrorMsg(err.message || 'Verification failed. Username not in authorized roster.');
     } finally {
       setLoading(false);
       setLoadingFor(null);
     }
   };
 
-  const handleCustomLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customToken.trim()) return;
-    await handleLogin(customToken.trim(), 'CUSTOM');
+  const handleOfficialKingsChatOAuth = () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const clientId = import.meta.env.VITE_KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c';
+      const redirectUri = window.location.origin + '/kingschat-callback';
+      const scopes = encodeURIComponent(JSON.stringify(['user_info']));
+
+      const oauthUrl = `https://accounts.kingschat.online/log-in?client_id=${clientId}&scopes=${scopes}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+      const width = 500;
+      const height = 650;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        oauthUrl,
+        'KingsChat OAuth',
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
+      );
+
+      const messageHandler = async (event: MessageEvent) => {
+        if (event.data && event.data.type === 'KINGSCHAT_OAUTH_SUCCESS' && event.data.token) {
+          window.removeEventListener('message', messageHandler);
+          if (popup && !popup.closed) popup.close();
+          try {
+            await loginWithKingsChat(event.data.token);
+          } catch (err: any) {
+            setErrorMsg(err.message || 'KingsChat OAuth verification failed');
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      const timer = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener('message', messageHandler);
+          setLoading(false);
+        }
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to open KingsChat OAuth window');
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,7 +114,7 @@ export const LoginScreen: React.FC = () => {
       <div style={{
         position: 'relative', zIndex: 1,
         width: '100%', maxWidth: '480px',
-        display: 'flex', flexDirection: 'column', gap: '28px',
+        display: 'flex', flexDirection: 'column', gap: '24px',
         animation: 'fadeSlideUp 0.5s ease both',
       }}>
 
@@ -77,10 +123,10 @@ export const LoginScreen: React.FC = () => {
           <div style={{
             width: '68px', height: '68px',
             borderRadius: '18px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #3b82f6 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 16px',
-            boxShadow: '0 12px 40px rgba(59,130,246,0.35)',
+            boxShadow: '0 12px 40px rgba(245,158,11,0.35)',
           }}>
             <Shield style={{ width: '34px', height: '34px', color: '#fff' }} />
           </div>
@@ -97,23 +143,52 @@ export const LoginScreen: React.FC = () => {
             }}>CCPMS</span>
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Command & Control Performance Management System
+            Command &amp; Control Performance Management System
           </p>
         </div>
 
-        {/* Testing Mode Banner */}
+        {/* Primary Official KingsChat OAuth Sign-In Button */}
+        <div>
+          <button
+            onClick={handleOfficialKingsChatOAuth}
+            disabled={loading}
+            className="btn"
+            style={{
+              width: '100%',
+              padding: '16px 24px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#000000',
+              fontWeight: 800,
+              fontSize: '1.05rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              boxShadow: '0 8px 25px rgba(245, 158, 11, 0.4)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              border: 'none',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            <Shield style={{ width: '22px', height: '22px' }} />
+            {loading ? 'Authenticating with KingsChat...' : 'Sign In with Official KingsChat'}
+          </button>
+        </div>
+
+        {/* Roster Information Card */}
         <div style={{
-          background: 'rgba(245,158,11,0.08)',
-          border: '1px solid rgba(245,158,11,0.25)',
-          borderRadius: '12px', padding: '12px 16px',
+          background: 'rgba(59, 130, 246, 0.08)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px', padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: '10px',
         }}>
-          <Sparkles style={{ width: '18px', height: '18px', color: '#f59e0b', flexShrink: 0, marginTop: '1px' }} />
-          <div style={{ fontSize: '0.78rem', color: '#fef3c7' }}>
-            <strong style={{ color: '#fbbf24', display: 'block', marginBottom: '2px' }}>
-              Testing Phase — KingsChat Quick-Login Active
+          <Lock style={{ width: '18px', height: '18px', color: '#60a5fa', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ fontSize: '0.8rem', color: '#dbeafe' }}>
+            <strong style={{ color: '#60a5fa', display: 'block', marginBottom: '2px' }}>
+              Authorized Roster Enforcement Active
             </strong>
-            OAuth security is bypassed. Select your portal below to access the system.
+            Login with KingsChat automatically verifies your registered handle (e.g. <code>pereedi</code> for OFEM, <code>alexdabest</code> for Tech AD) and routes you to your authorized portal.
           </div>
         </div>
 
@@ -130,101 +205,7 @@ export const LoginScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Login Tiles */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{
-            fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px',
-          }}>
-            Select Your Portal
-          </div>
-
-          {/* OFEM Tile */}
-          <button
-            id="login-ofem-btn"
-            onClick={() => handleLogin('KC_SUPERADMIN', 'OFEM')}
-            disabled={loading}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 20px', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-              background: loadingFor === 'OFEM'
-                ? 'rgba(139,92,246,0.2)'
-                : 'linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(99,102,241,0.08) 100%)',
-              outline: '1.5px solid rgba(139,92,246,0.4)',
-              transition: 'all 0.2s ease',
-              textAlign: 'left',
-            }}
-            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.outline = '1.5px solid rgba(139,92,246,0.8)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.outline = '1.5px solid rgba(139,92,246,0.4)'; }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
-              }}>
-                <span style={{ fontSize: '1.3rem' }}>👑</span>
-              </div>
-              <div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginBottom: '2px' }}>
-                  OFEM — Office of Executive Minister
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#c084fc' }}>
-                  Full system access · Approve reports · Mission Command
-                </div>
-              </div>
-            </div>
-            {loadingFor === 'OFEM'
-              ? <div style={{ width: '16px', height: '16px', border: '2px solid #c084fc', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-              : <ArrowRight style={{ width: '18px', height: '18px', color: '#c084fc' }} />
-            }
-          </button>
-
-          {/* AD Tile */}
-          <button
-            id="login-ad-btn"
-            onClick={() => handleLogin('KC_DIRECTOR', 'AD')}
-            disabled={loading}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 20px', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-              background: loadingFor === 'AD'
-                ? 'rgba(245,158,11,0.18)'
-                : 'linear-gradient(135deg, rgba(245,158,11,0.10) 0%, rgba(59,130,246,0.07) 100%)',
-              outline: '1.5px solid rgba(245,158,11,0.35)',
-              transition: 'all 0.2s ease',
-              textAlign: 'left',
-            }}
-            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.outline = '1.5px solid rgba(245,158,11,0.8)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.outline = '1.5px solid rgba(245,158,11,0.35)'; }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(245,158,11,0.35)',
-              }}>
-                <span style={{ fontSize: '1.3rem' }}>🏢</span>
-              </div>
-              <div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', marginBottom: '2px' }}>
-                  AD — Assistant Director Portal
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#fbbf24' }}>
-                  Submit reports · Track KPIs · Directorate management
-                </div>
-              </div>
-            </div>
-            {loadingFor === 'AD'
-              ? <div style={{ width: '16px', height: '16px', border: '2px solid #fbbf24', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-              : <ArrowRight style={{ width: '18px', height: '18px', color: '#fbbf24' }} />
-            }
-          </button>
-        </div>
-
-        {/* Custom Token Form */}
+        {/* Custom Roster Handle Form for Manual Roster Testing */}
         <form onSubmit={handleCustomLogin} style={{
           borderTop: '1px solid var(--border-color)', paddingTop: '20px',
           display: 'flex', flexDirection: 'column', gap: '10px',
@@ -233,13 +214,13 @@ export const LoginScreen: React.FC = () => {
             fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
             textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
-            Or Enter Custom KingsChat Handle
+            Or Sign In with Authorized KingsChat Username
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               id="custom-token-input"
               type="text"
-              placeholder="e.g. KC_CUSTOM_USER or email"
+              placeholder="e.g. pereedi, alexdabest, or fintech_ad"
               value={customToken}
               onChange={e => setCustomToken(e.target.value)}
               className="input-field"
@@ -253,7 +234,7 @@ export const LoginScreen: React.FC = () => {
               className="btn btn-kingschat"
               style={{ whiteSpace: 'nowrap' }}
             >
-              {loadingFor === 'CUSTOM' ? 'Signing In...' : 'Sign In'}
+              {loadingFor === 'CUSTOM' ? 'Verifying...' : 'Sign In'}
             </button>
           </div>
         </form>

@@ -68,6 +68,14 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     fetchDirectorates();
   }, []);
 
+  // Lock directorate to user's assigned directorate from KingsChat login
+  useEffect(() => {
+    if (user?.directorate) {
+      if (user.directorate.id) setSelectedDirectorateId(user.directorate.id);
+      if (user.directorate.name) setSelectedDirectorateName(user.directorate.name);
+    }
+  }, [user]);
+
   // Pre-fill state if editReportData prop is supplied
   useEffect(() => {
     if (editReportData) {
@@ -119,7 +127,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       const res: any = await api.get('/directorates');
       if (res.success && res.data && res.data.length > 0) {
         setDirectorates(res.data);
-        if (!editReportData) {
+        if (!editReportData && !user?.directorate) {
           setSelectedDirectorateId(res.data[0].id);
           setSelectedDirectorateName(res.data[0].name);
         }
@@ -349,30 +357,49 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
             Section 1: Directorate Selection, Calendar Dates & Specific Goals
           </h3>
 
-          {/* PROMINENT DIRECTORATE DROPDOWN SELECTOR */}
+          {/* LOCKED DIRECTORATE FIELD (BOUND STRICTLY TO KINGSCHAT AUTHORIZED USER) */}
           <div style={{
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            padding: '16px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
+            padding: '16px 20px',
             borderRadius: '12px',
-            marginBottom: '16px'
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Building2 style={{ width: '18px', height: '18px' }} />
-              Select Directorate for Report Submission *
-            </label>
-            <select
-              className="input-field"
-              value={selectedDirectorateId || selectedDirectorateName}
-              onChange={handleDirectorateChange}
-              style={{ fontWeight: 700, fontSize: '0.95rem', color: '#ffffff', background: '#0f172a' }}
-            >
-              {directorates.map((dir, idx) => (
-                <option key={dir.id || idx} value={dir.id || dir.name}>
-                  🏢 {dir.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '10px',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              }}>
+                <Building2 style={{ width: '22px', height: '22px', color: '#ffffff' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                  Assigned Directorate (Locked to KingsChat Roster)
+                </label>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginTop: '2px' }}>
+                  🏢 {user?.directorate?.name || selectedDirectorateName}
+                </div>
+              </div>
+            </div>
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              padding: '6px 12px',
+              borderRadius: '20px',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: '#34d399',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              🔒 Verified
+            </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
