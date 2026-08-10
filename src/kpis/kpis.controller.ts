@@ -29,8 +29,20 @@ export class KPIController {
   async listKPIs(req: AuthRequest, res: Response) {
     try {
       const { directorateId, categoryId, search } = req.query;
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      let effectiveDirectorateId = directorateId as string;
+      if (userRole === 'DIRECTOR') {
+        const assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id;
+        if (assignedDirId) {
+          effectiveDirectorateId = assignedDirId;
+        }
+      }
+
       const kpis = await kpiService.listKPIs({
-        directorateId: directorateId as string,
+        directorateId: effectiveDirectorateId,
         categoryId: categoryId as string,
         search: search as string,
       });
@@ -43,7 +55,16 @@ export class KPIController {
   async createKPI(req: AuthRequest, res: Response) {
     try {
       const { name, code, description, unit, weight, targetValue, categoryId, directorateId, departmentId } = req.body;
-      if (!name || !code || !unit || weight === undefined || targetValue === undefined || !categoryId || !directorateId) {
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      let assignedDirId = directorateId;
+      if (userRole === 'DIRECTOR') {
+        assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id || directorateId;
+      }
+
+      if (!name || !code || !unit || weight === undefined || targetValue === undefined || !categoryId || !assignedDirId) {
         return sendError(res, 'Missing required fields for KPI creation', 400);
       }
       const created = await kpiService.createKPI({
@@ -54,7 +75,7 @@ export class KPIController {
         weight: parseFloat(weight),
         targetValue: parseFloat(targetValue),
         categoryId,
-        directorateId,
+        directorateId: assignedDirId,
         departmentId,
       });
       return sendSuccess(res, created, 'KPI created successfully', 201);

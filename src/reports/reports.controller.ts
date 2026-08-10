@@ -9,8 +9,22 @@ export class ReportsController {
   async listReports(req: AuthRequest, res: Response) {
     try {
       const { directorateId, status, type, authorId } = req.query;
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      // STRICT DIRECTORATE ISOLATION:
+      // If user is a DIRECTOR, force directorateId filter to their assigned directorate.
+      let effectiveDirectorateId = directorateId as string;
+      if (userRole === 'DIRECTOR') {
+        const assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id;
+        if (assignedDirId) {
+          effectiveDirectorateId = assignedDirId;
+        }
+      }
+
       const reports = await reportsService.listReports({
-        directorateId: directorateId as string,
+        directorateId: effectiveDirectorateId,
         status: status as string,
         type: type as string,
         authorId: authorId as string,
@@ -27,13 +41,24 @@ export class ReportsController {
       if (!title || !period || !summary) {
         return sendError(res, 'Title, period, and summary are required', 400);
       }
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      // STRICT DIRECTORATE BINDING:
+      // If user is a DIRECTOR, force directorateId to their assigned directorate.
+      let assignedDirId = directorateId;
+      if (userRole === 'DIRECTOR') {
+        assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id || directorateId;
+      }
+
       const created = await reportsService.createReport({
         title,
         type,
         period,
         summary,
         dataJson,
-        directorateId,
+        directorateId: assignedDirId,
         authorId: req.user!.id,
       });
       return sendSuccess(res, created, 'Draft report created successfully', 201);

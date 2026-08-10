@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
+import { getAuthorizedUserConfig } from '../config/authorized-users';
 
 export interface KingsChatProfile {
   id: string;
@@ -18,8 +19,21 @@ export class AuthService {
    */
   async verifyKingsChatToken(token: string): Promise<KingsChatProfile> {
     const cleanToken = token ? token.trim() : 'KC_DIRECTOR';
+    const config = getAuthorizedUserConfig(cleanToken);
 
-    // 1. Direct mock token shortcuts
+    if (config) {
+      return {
+        id: config.kingschatUsername,
+        name: config.name,
+        email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
+        phone: config.phone || '+2348000000000',
+        avatar_url: config.role === 'SUPER_ADMIN'
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+          : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      };
+    }
+
+    // Direct mock token shortcuts
     if (cleanToken === 'KC_SUPERADMIN') {
       return {
         id: 'KC_SUPERADMIN',
@@ -40,7 +54,7 @@ export class AuthService {
       };
     }
 
-    // 2. If token starts with KC_ or Dev Mock is enabled (No-Security Mode)
+    // If token starts with KC_ or Dev Mock is enabled (No-Security Mode)
     if (ENV.DEV_MOCK_KINGSCHAT || cleanToken.startsWith('KC_') || process.env.NODE_ENV !== 'production') {
       logger.info(`[AuthService] KingsChat no-security mode active for token: ${cleanToken}`);
       const mockId = cleanToken.startsWith('KC_') ? cleanToken : `KC_${cleanToken.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -53,7 +67,7 @@ export class AuthService {
       };
     }
 
-    // 3. Fallback to KingsChat profile endpoint with fallback on error
+    // Fallback to KingsChat profile endpoint with fallback on error
     try {
       const response = await axios.get(`${ENV.KINGSCHAT_API_URL}/profile`, {
         headers: {
@@ -84,27 +98,28 @@ export class AuthService {
 
   /**
    * Synchronize user profile in local DB and issue local JWT.
-   * In prototype/testing mode (DEV_MOCK_KINGSCHAT or KC_ tokens), the DB is
-   * bypassed entirely — returning a signed JWT and mock user without needing
-   * any seed data in the database.
    */
   async authenticateWithKingsChat(token: string) {
     const cleanToken = token ? token.trim() : 'KC_DIRECTOR';
+    const config = getAuthorizedUserConfig(cleanToken);
+
     const isMockToken =
       ENV.DEV_MOCK_KINGSCHAT ||
+      !!config ||
       cleanToken === 'KC_SUPERADMIN' ||
       cleanToken === 'KC_DIRECTOR' ||
       cleanToken.startsWith('KC_');
 
-    // ── PROTOTYPE BYPASS for mock KC_ tokens ─────────────────────────────────
+    // ── PROTOTYPE BYPASS & ROSTER AUTHORIZATION ──────────────────────────────
     if (isMockToken) {
-      const isOFEM = cleanToken === 'KC_SUPERADMIN';
+      const lookupId = config ? config.kingschatUsername : cleanToken;
+      const isOFEM = config ? config.role === 'SUPER_ADMIN' : cleanToken === 'KC_SUPERADMIN';
 
-      // Try to resolve the real seeded user from DB so FK constraints work
+      // Try to resolve the real user from DB
       let dbUser: any = null;
       try {
         dbUser = await prisma.user.findUnique({
-          where: { kingschatUserId: cleanToken },
+          where: { kingschatUserId: lookupId },
           include: {
             role: true,
             directorate: true,
@@ -112,22 +127,22 @@ export class AuthService {
           },
         });
       } catch (_) {
-        // DB not ready yet — fall through to hardcoded mock
+        // DB not ready yet
       }
 
       let mockUser: any;
 
       if (dbUser) {
-        // Use real DB record — this ensures authorId / directorateId FKs work
+        // Use real DB record
         mockUser = {
           id:              dbUser.id,
           kingschatUserId: dbUser.kingschatUserId,
-          name:            isOFEM ? 'OFEM Executive' : 'AD Director',
+          name:            dbUser.name,
           email:           dbUser.email,
           phone:           dbUser.phone,
-          profilePhoto:    isOFEM
+          profilePhoto:    dbUser.profilePhoto || (isOFEM
             ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'),
           status:          'ACTIVE',
           role:            dbUser.role?.name || (isOFEM ? 'SUPER_ADMIN' : 'DIRECTOR'),
           permissions:     isOFEM
@@ -140,13 +155,20 @@ export class AuthService {
           lastLogin:       new Date().toISOString(),
         };
       } else {
-        // DB not seeded yet — return pure mock (report submission won't work until seeded)
+        // If config exists, resolve directorate by code from DB
+        let targetDir: any = null;
+        if (config?.directorateCode) {
+          try {
+            targetDir = await prisma.directorate.findUnique({ where: { code: config.directorateCode } });
+          } catch (_) {}
+        }
+
         mockUser = {
-          id:              isOFEM ? 'mock-ofem-001' : 'mock-ad-001',
-          kingschatUserId: cleanToken,
-          name:            isOFEM ? 'OFEM Executive' : 'AD Director',
-          email:           isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org',
-          phone:           isOFEM ? '+2348000000001' : '+2348000000002',
+          id:              `mock-${lookupId.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          kingschatUserId: lookupId,
+          name:            config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
+          email:           config?.email || (isOFEM ? 'ofem@ccpms.org' : 'ad.director@ccpms.org'),
+          phone:           config?.phone || (isOFEM ? '+2348000000001' : '+2348000000002'),
           profilePhoto:    isOFEM
             ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
             : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
@@ -157,7 +179,9 @@ export class AuthService {
             : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
           directorate:     isOFEM
             ? null
-            : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' },
+            : (targetDir
+                ? { id: targetDir.id, name: targetDir.name, code: targetDir.code }
+                : { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' }),
           department:      null,
           lastLogin:       new Date().toISOString(),
         };
@@ -172,7 +196,7 @@ export class AuthService {
       const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
       const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
 
-      logger.info(`[AuthService] PROTOTYPE BYPASS — mock login for: ${cleanToken} (${mockUser.role}) userId=${mockUser.id}`);
+      logger.info(`[AuthService] Authorized user login for: ${lookupId} (${mockUser.role}) userId=${mockUser.id}`);
       return { accessToken, refreshToken, user: mockUser };
     }
     // ─────────────────────────────────────────────────────────────────────────

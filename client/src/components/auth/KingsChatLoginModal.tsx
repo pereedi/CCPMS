@@ -43,6 +43,58 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
     }
   };
 
+  const handleOfficialKingsChatOAuth = () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const clientId = import.meta.env.VITE_KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c';
+      const redirectUri = window.location.origin + '/kingschat-callback';
+      const scopes = encodeURIComponent(JSON.stringify(['user_info']));
+
+      const oauthUrl = `https://accounts.kingschat.online/log-in?client_id=${clientId}&scopes=${scopes}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+      const width = 500;
+      const height = 650;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        oauthUrl,
+        'KingsChat OAuth',
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
+      );
+
+      const messageHandler = async (event: MessageEvent) => {
+        if (event.data && event.data.type === 'KINGSCHAT_OAUTH_SUCCESS' && event.data.token) {
+          window.removeEventListener('message', messageHandler);
+          if (popup && !popup.closed) popup.close();
+          try {
+            await loginWithKingsChat(event.data.token);
+            if (onClose) onClose();
+          } catch (err: any) {
+            setErrorMsg(err.message || 'KingsChat OAuth verification failed');
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      // Fallback check if popup was blocked or closed
+      const timer = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener('message', messageHandler);
+          setLoading(false);
+        }
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to open KingsChat OAuth window');
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -90,6 +142,34 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
           </p>
         </div>
 
+        {/* Official KingsChat OAuth Login Button */}
+        <div style={{ marginBottom: '20px' }}>
+          <button
+            onClick={handleOfficialKingsChatOAuth}
+            disabled={loading}
+            className="btn"
+            style={{
+              width: '100%',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#000000',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
+              cursor: 'pointer',
+              border: 'none',
+            }}
+          >
+            <Shield style={{ width: '20px', height: '20px' }} />
+            {loading ? 'Connecting to KingsChat...' : 'Sign In with Official KingsChat OAuth'}
+          </button>
+        </div>
+
         {/* No-Security Mode Warning/Notice Banner */}
         {isKingsChatBypassActive && (
           <div style={{
@@ -105,9 +185,9 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
             <Sparkles style={{ width: '20px', height: '20px', color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />
             <div style={{ fontSize: '0.8rem', color: '#fef3c7' }}>
               <strong style={{ display: 'block', color: '#f59e0b', marginBottom: '2px' }}>
-                🔓 KingsChat Quick-Login Active (No-Security Mode)
+                🔓 Developer Quick-Login &amp; Roster Testing Available
               </strong>
-              OAuth security check is currently bypassed for testing. Select a 1-click profile below or enter any KingsChat handle.
+              You can also select a 1-click directorate profile below or enter any authorized KingsChat handle for instant testing.
             </div>
           </div>
         )}
@@ -175,12 +255,36 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '1.2rem' }}>🏢</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>AD — Assistant Director</div>
-                  <div style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Submit &amp; Manage Directorate Reports</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>AD — Tech &amp; Digital Innovation</div>
+                  <div style={{ fontSize: '0.75rem', color: '#60a5fa' }}>Submit &amp; Manage TECH_DIGITAL Reports</div>
                 </div>
               </div>
               <ArrowRight style={{ width: '16px', height: '16px', color: '#60a5fa' }} />
             </button>
+          </div>
+
+          {/* Preset Directorate Account Selector */}
+          <div style={{ marginTop: '12px' }}>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+              Test Other Directorate AD Accounts:
+            </label>
+            <select
+              className="input-field"
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value) handlePresetLogin(e.target.value);
+              }}
+              disabled={loading}
+              style={{ fontSize: '0.85rem' }}
+            >
+              <option value="" disabled>-- Select Directorate AD Account --</option>
+              <option value="fintech_ad">💳 FinTech &amp; Technology Products AD</option>
+              <option value="socialmedia_ad">📱 Social Media &amp; Distribution AD</option>
+              <option value="citizen_ad">🌐 Citizen Engagement &amp; Global AD</option>
+              <option value="research_ad">📊 Research &amp; Data Intelligence AD</option>
+              <option value="content_ad">🎬 Content &amp; Media Production AD</option>
+              <option value="digitalassets_ad">📚 Digital Assets &amp; Language AD</option>
+            </select>
           </div>
         </div>
 
@@ -192,7 +296,7 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
-              placeholder="e.g. kingschat_user_123"
+              placeholder="e.g. fintech_ad or kingschat_user_123"
               value={customToken}
               onChange={(e) => setCustomToken(e.target.value)}
               className="input-field"

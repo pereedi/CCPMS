@@ -21,7 +21,7 @@ router.post('/:id/submit', requirePermission('reports:create'), auditLogMiddlewa
 router.post('/:id/review', requireRole('DIRECTOR', 'SUPER_ADMIN'), auditLogMiddleware('APPROVAL', 'ReportReview'), (req, res) =>
   controller.reviewReport(req, res)
 );
-router.post('/:id/approve', requireRole('DIRECTOR', 'SUPER_ADMIN'), auditLogMiddleware('APPROVAL', 'ReportDirectorApproval'), (req, res) =>
+router.post('/:id/approve', requireRole('SUPER_ADMIN'), auditLogMiddleware('APPROVAL', 'ReportDirectorApproval'), (req, res) =>
   controller.approveReport(req, res)
 );
 

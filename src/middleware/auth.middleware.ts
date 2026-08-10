@@ -43,7 +43,7 @@ const MOCK_USERS: Record<string, AuthRequest['user']> = {
     profilePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     status: 'ACTIVE',
     role: 'DIRECTOR',
-    permissions: ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+    permissions: ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS', 'reports:read', 'reports:create'],
     directorate: { id: 'mock-dir-001', name: 'Technology & Digital Innovation', code: 'TECH_DIGITAL' },
     lastLogin: new Date().toISOString(),
   },
@@ -85,8 +85,8 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
             status:          'ACTIVE',
             role:            dbUser.role?.name || decoded.role,
             permissions:     kcId === 'KC_SUPERADMIN'
-              ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
-              : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+              ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT', 'reports:read', 'reports:create']
+              : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS', 'reports:read', 'reports:create'],
             directorate:     dbUser.directorate
               ? { id: dbUser.directorate.id, name: dbUser.directorate.name, code: dbUser.directorate.code }
               : null,

@@ -9,8 +9,20 @@ export class ProjectsController {
   async listProjects(req: AuthRequest, res: Response) {
     try {
       const { directorateId, status, search } = req.query;
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      let effectiveDirectorateId = directorateId as string;
+      if (userRole === 'DIRECTOR') {
+        const assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id;
+        if (assignedDirId) {
+          effectiveDirectorateId = assignedDirId;
+        }
+      }
+
       const projects = await projectsService.listProjects({
-        directorateId: directorateId as string,
+        directorateId: effectiveDirectorateId,
         status: status as string,
         search: search as string,
       });
@@ -23,7 +35,16 @@ export class ProjectsController {
   async createProject(req: AuthRequest, res: Response) {
     try {
       const { name, code, description, budget, startDate, endDate, directorateId, departmentId, managerId } = req.body;
-      if (!name || !code || budget === undefined || !directorateId) {
+
+      const rawRole = req.user?.role;
+      const userRole = typeof rawRole === 'string' ? rawRole : (rawRole as any)?.name;
+
+      let assignedDirId = directorateId;
+      if (userRole === 'DIRECTOR') {
+        assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id || directorateId;
+      }
+
+      if (!name || !code || budget === undefined || !assignedDirId) {
         return sendError(res, 'Name, code, budget, and directorateId are required', 400);
       }
       const created = await projectsService.createProject({
@@ -33,7 +54,7 @@ export class ProjectsController {
         budget: parseFloat(budget),
         startDate,
         endDate,
-        directorateId,
+        directorateId: assignedDirId,
         departmentId,
         managerId,
       });

@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span style={{ fontSize: '1.1rem' }}>{isOFEM ? '👑' : '🏢'}</span>
           <div>
             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
-              {isOFEM ? 'Office of Executive Minister (OFEM)' : 'AD — Assistant Director Portal'}
+              {isOFEM ? 'Office of Executive Minister (OFEM)' : (user?.directorate?.name || 'AD — Assistant Director Portal')}
             </div>
             <div style={{ fontSize: '0.7rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 500 }}>
               {user?.name || (isOFEM ? 'Executive Access' : 'Directorate Access')}

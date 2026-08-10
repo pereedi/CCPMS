@@ -63,6 +63,17 @@ const DashboardContent: React.FC = () => {
 
   // ── Render tabs based on role ─────────────────────────────────────
   const renderTabContent = () => {
+    const ofemTabs = ['overview', 'directorates', 'reports', 'audit'];
+
+    // STRICT AD ISOLATION GUARD: AD Directors cannot view OFEM executive tabs
+    if (currentRole === 'AD' && ofemTabs.includes(activeTab)) {
+      return (
+        <DirectorReportForm
+          onReportSubmitted={() => setActiveTab('submitted-reports')}
+        />
+      );
+    }
+
     switch (activeTab) {
       // OFEM tabs
       case 'overview':          return <OverviewTab />;
@@ -128,7 +139,13 @@ const DashboardContent: React.FC = () => {
   );
 };
 
+import { KingsChatCallbackHandler } from './components/auth/KingsChatCallbackHandler';
+
 export function App() {
+  if (window.location.pathname === '/kingschat-callback') {
+    return <KingsChatCallbackHandler />;
+  }
+
   return (
     <AuthProvider>
       <DashboardContent />

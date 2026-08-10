@@ -123,32 +123,9 @@ async function main() {
     },
   });
 
-  // 4. Sample Users (Linked to KingsChat User IDs)
-  const seedUsers = [
-    {
-      kingschatUserId: 'KC_SUPERADMIN',
-      name: 'Super Admin User',
-      email: 'admin@ccpms.org',
-      roleId: roles['SUPER_ADMIN'].id,
-      directorateId: techDir.id,
-      departmentId: techDept.id,
-    },
-    {
-      kingschatUserId: 'KC_DIRECTOR',
-      name: 'Directorate Director',
-      email: 'director.tech@ccpms.org',
-      roleId: roles['DIRECTOR'].id,
-      directorateId: techDir.id,
-    },
-  ];
-
-  for (const u of seedUsers) {
-    await prisma.user.upsert({
-      where: { kingschatUserId: u.kingschatUserId },
-      update: u,
-      create: u,
-    });
-  }
+  // 4. Authorized Users Roster (Linked to KingsChat User IDs)
+  const { syncAuthorizedUsersToDatabase } = await import('../src/config/authorized-users');
+  await syncAuthorizedUsersToDatabase(prisma);
 
   // 5. KPI Categories & KPIs
   const opCategory = await prisma.kPICategory.upsert({

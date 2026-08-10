@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Report } from '../../types';
 import { DirectorReportForm } from '../directorates/DirectorReportForm';
-import { FileText, Eye, CheckCircle2, Users, Database, Target, TrendingUp, X, Edit3, Check, XCircle, ShieldCheck, AlertCircle } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, Users, Database, Target, TrendingUp, X, Edit3, XCircle, ShieldCheck } from 'lucide-react';
 import { EspIcon } from '../common/EspIcon';
 
 export const SubmittedReportsView: React.FC = () => {
@@ -10,8 +10,6 @@ export const SubmittedReportsView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [editingReport, setEditingReport] = useState<any | null>(null);
-  const [actionFeedback, setActionFeedback] = useState<{ id: string; msg: string; type: 'success' | 'error' } | null>(null);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubmittedReports();
@@ -43,69 +41,6 @@ export const SubmittedReportsView: React.FC = () => {
     }
   };
 
-  const handleApproveReport = async (reportId: string) => {
-    setApprovingId(reportId);
-    setActionFeedback(null);
-    try {
-      const res: any = await api.post(`/reports/${reportId}/approve`, {
-        action: 'APPROVE',
-        comments: 'Approved by OFEM'
-      });
-      if (res.success) {
-        setActionFeedback({
-          id: reportId,
-          msg: '✅ Directorate Report successfully APPROVED by OFEM!',
-          type: 'success'
-        });
-        await fetchSubmittedReports();
-        if (selectedReport && selectedReport.report.id === reportId) {
-          setSelectedReport((prev: any) => prev ? { ...prev, report: { ...prev.report, status: 'APPROVED' } } : null);
-        }
-      }
-    } catch (err: any) {
-      setActionFeedback({
-        id: reportId,
-        msg: err.message || 'Failed to approve report.',
-        type: 'error'
-      });
-    } finally {
-      setApprovingId(null);
-    }
-  };
-
-  const handleRejectReport = async (reportId: string) => {
-    const reason = prompt('Please enter rejection reason/comments for the Directorate:', 'Report requires revision on milestone targets');
-    if (reason === null) return; // User cancelled
-
-    setApprovingId(reportId);
-    setActionFeedback(null);
-    try {
-      const res: any = await api.post(`/reports/${reportId}/approve`, {
-        action: 'REJECT',
-        comments: reason || 'Rejected by Super Admin'
-      });
-      if (res.success) {
-        setActionFeedback({
-          id: reportId,
-          msg: 'Report returned / REJECTED with comments sent to author.',
-          type: 'error'
-        });
-        await fetchSubmittedReports();
-        if (selectedReport && selectedReport.report.id === reportId) {
-          setSelectedReport((prev: any) => prev ? { ...prev, report: { ...prev.report, status: 'REJECTED' } } : null);
-        }
-      }
-    } catch (err: any) {
-      setActionFeedback({
-        id: reportId,
-        msg: err.message || 'Failed to reject report.',
-        type: 'error'
-      });
-    } finally {
-      setApprovingId(null);
-    }
-  };
-
   const parseReportData = (r: Report) => {
     let parsed: any = {};
     if (r && (r as any).dataJson) {
@@ -121,6 +56,28 @@ export const SubmittedReportsView: React.FC = () => {
 
   const isApproved = (status: string) => ['APPROVED', 'DIRECTOR_APPROVED', 'SUPER_ADMIN_APPROVED'].includes(status);
 
+  const getStatusBadge = (status: string) => {
+    if (isApproved(status)) {
+      return (
+        <span className="badge badge-excellent" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
+          <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED BY OFEM
+        </span>
+      );
+    }
+    if (status === 'REJECTED') {
+      return (
+        <span className="badge badge-critical" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <XCircle style={{ width: '14px', height: '14px' }} /> RETURNED FOR REVISION
+        </span>
+      );
+    }
+    return (
+      <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 800, background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid #f59e0b' }}>
+        ⏳ PENDING OFEM REVIEW
+      </span>
+    );
+  };
+
   if (loading) {
     return <div style={{ padding: '40px', color: 'var(--text-secondary)' }}>Loading submitted reports...</div>;
   }
@@ -130,46 +87,45 @@ export const SubmittedReportsView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <ShieldCheck style={{ width: '18px', height: '18px', color: 'var(--kingschat-gold)' }} />
-            <span className="badge badge-role">OFEM EXECUTIVE APPROVALS</span>
+            <FileText style={{ width: '18px', height: '18px', color: 'var(--accent-blue)' }} />
+            <span className="badge badge-role">YOUR SUBMITTED REPORTS</span>
           </div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>Submitted Directorate Reports Feed</h2>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>Directorate Submission Feed</h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Review, Approve, Edit, & Audit Directorate Submissions (Percentage Achievements, Financial Targets & Staffing)
+            View & edit your submitted directorate reports — approvals are handled by OFEM
           </p>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {reports.length === 0 && (
+          <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', borderRadius: '16px' }}>
+            <FileText style={{ width: '40px', height: '40px', margin: '0 auto 12px', opacity: 0.4 }} />
+            <p style={{ fontWeight: 600 }}>No reports submitted yet.</p>
+            <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Use the "Submit Report" tab to file your first directorate report.</p>
+          </div>
+        )}
+
         {reports.map((report) => {
           const data = parseReportData(report);
           const pct = data.percentageAchievement || '85';
           const approved = isApproved(report.status);
           const rejected = report.status === 'REJECTED';
-          const isPending = approvingId === report.id;
 
           return (
             <div key={report.id} className="glass-panel" style={{
               padding: '20px 24px',
               borderRadius: '16px',
-              border: approved ? '1px solid rgba(16, 185, 129, 0.4)' : rejected ? '1px solid rgba(244, 63, 94, 0.4)' : '1px solid rgba(245, 158, 11, 0.3)'
+              border: approved
+                ? '1px solid rgba(16, 185, 129, 0.4)'
+                : rejected
+                  ? '1px solid rgba(244, 63, 94, 0.3)'
+                  : '1px solid rgba(245, 158, 11, 0.3)'
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                 <div style={{ flex: 1, minWidth: '300px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                    {approved ? (
-                      <span className="badge badge-excellent" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
-                        <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED
-                      </span>
-                    ) : rejected ? (
-                      <span className="badge badge-critical" style={{ fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <XCircle style={{ width: '14px', height: '14px' }} /> REJECTED
-                      </span>
-                    ) : (
-                      <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 800, background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid #f59e0b' }}>
-                        ⏳ PENDING APPROVAL
-                      </span>
-                    )}
+                    {getStatusBadge(report.status)}
 
                     <span className="badge badge-excellent" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
                       {pct}% Achieved
@@ -178,7 +134,7 @@ export const SubmittedReportsView: React.FC = () => {
                       {report.directorate?.code || 'HQ'}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Period: {report.period} • Submitted by {report.author?.name || 'Director'}
+                      Period: {report.period} • By {report.author?.name || 'Director'}
                     </span>
                   </div>
 
@@ -187,56 +143,34 @@ export const SubmittedReportsView: React.FC = () => {
                     {report.summary}
                   </p>
 
-                  {actionFeedback && actionFeedback.id === report.id && (
+                  {/* Info callout for rejected reports */}
+                  {rejected && (
                     <div style={{
-                      marginTop: '10px',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      background: actionFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                      color: actionFeedback.type === 'success' ? '#34d399' : '#f87171',
-                      border: actionFeedback.type === 'success' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)'
+                      marginTop: '10px', padding: '8px 12px', borderRadius: '8px',
+                      fontSize: '0.8rem', fontWeight: 600,
+                      background: 'rgba(244, 63, 94, 0.1)', color: '#f87171',
+                      border: '1px solid rgba(244, 63, 94, 0.3)',
+                      display: 'flex', alignItems: 'center', gap: '6px'
                     }}>
-                      {actionFeedback.msg}
+                      <XCircle style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                      This report was returned by OFEM for revision. Please edit and resubmit.
                     </div>
                   )}
                 </div>
 
-                {/* APPROVAL ACTIONS FOR SUPER ADMIN */}
+                {/* AD ACTIONS — View & Edit only, no approve/reject */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* Allow editing if not yet approved */}
                   {!approved && (
                     <button
-                      onClick={() => handleApproveReport(report.id)}
-                      disabled={isPending}
-                      className="btn btn-kingschat btn-sm"
-                      style={{ gap: '6px', padding: '8px 16px', fontWeight: 800 }}
-                    >
-                      <Check style={{ width: '16px', height: '16px' }} />
-                      {isPending ? 'Approving...' : 'Approve Report'}
-                    </button>
-                  )}
-
-                  {!approved && !rejected && (
-                    <button
-                      onClick={() => handleRejectReport(report.id)}
-                      disabled={isPending}
+                      onClick={() => setEditingReport(report)}
                       className="btn btn-secondary btn-sm"
-                      style={{ gap: '6px', color: '#f87171', borderColor: 'rgba(244, 63, 94, 0.4)' }}
+                      style={{ gap: '6px', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}
                     >
-                      <XCircle style={{ width: '14px', height: '14px' }} />
-                      Reject
+                      <Edit3 style={{ width: '14px', height: '14px' }} />
+                      Edit Report
                     </button>
                   )}
-
-                  <button
-                    onClick={() => setEditingReport(report)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ gap: '6px', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}
-                  >
-                    <Edit3 style={{ width: '14px', height: '14px' }} />
-                    Edit
-                  </button>
 
                   <button
                     onClick={() => setSelectedReport({ report, data })}
@@ -268,7 +202,7 @@ export const SubmittedReportsView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Edit3 style={{ width: '22px', height: '22px', color: '#fbbf24' }} />
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
-                  Editing Submitted Report: {editingReport.title}
+                  Editing Report: {editingReport.title}
                 </h3>
               </div>
               <button onClick={() => setEditingReport(null)} className="btn btn-secondary btn-sm">
@@ -288,7 +222,7 @@ export const SubmittedReportsView: React.FC = () => {
         </div>
       )}
 
-      {/* FULL REPORT CARD MODAL */}
+      {/* FULL REPORT DETAILS MODAL */}
       {selectedReport && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -306,35 +240,16 @@ export const SubmittedReportsView: React.FC = () => {
                   <span className="badge badge-excellent" style={{ fontSize: '0.8rem' }}>
                     {selectedReport.data.percentageAchievement || '85'}% Target Achievement
                   </span>
-                  {isApproved(selectedReport.report.status) ? (
-                    <span className="badge badge-excellent" style={{ fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
-                      <CheckCircle2 style={{ width: '14px', height: '14px' }} /> APPROVED BY OFEM
-                    </span>
-                  ) : (
-                    <span className="badge" style={{ fontSize: '0.8rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
-                      ⏳ PENDING APPROVAL
-                    </span>
-                  )}
+                  {getStatusBadge(selectedReport.report.status)}
                 </div>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff' }}>{selectedReport.report.title}</h2>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                   Directorate: {selectedReport.report.directorate?.name} • Author: {selectedReport.report.author?.name}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {!isApproved(selectedReport.report.status) && (
-                  <button
-                    onClick={() => handleApproveReport(selectedReport.report.id)}
-                    className="btn btn-kingschat btn-sm"
-                    style={{ gap: '6px' }}
-                  >
-                    <Check style={{ width: '14px', height: '14px' }} /> Approve Now
-                  </button>
-                )}
-                <button onClick={() => setSelectedReport(null)} className="btn btn-secondary btn-sm" style={{ padding: '6px' }}>
-                  <X style={{ width: '18px', height: '18px' }} />
-                </button>
-              </div>
+              <button onClick={() => setSelectedReport(null)} className="btn btn-secondary btn-sm" style={{ padding: '6px' }}>
+                <X style={{ width: '18px', height: '18px' }} />
+              </button>
             </div>
 
             {/* Modal Sections */}
