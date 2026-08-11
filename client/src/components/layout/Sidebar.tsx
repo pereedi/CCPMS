@@ -93,9 +93,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div style={{ fontSize: '0.72rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 600 }}>
               {user?.name || (isOFEM ? 'Executive Access' : 'Directorate Access')}
-              {(user?.kingschatUserId || user?.username) && (
+              {user?.kingschatUserId && user.kingschatUserId.length <= 20 && !user.kingschatUserId.includes('=') && (
                 <span style={{ color: '#60a5fa', marginLeft: '6px', fontWeight: 700 }}>
-                  (@{user.kingschatUserId || user.username})
+                  (@{user.kingschatUserId.replace(/^@/, '')})
                 </span>
               )}
             </div>

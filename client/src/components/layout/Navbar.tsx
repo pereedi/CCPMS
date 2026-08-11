@@ -18,6 +18,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isOFEM = currentRole === 'OFEM';
 
+  const getDisplayHandle = (user: any) => {
+    const handle = user?.username || user?.kingschatUserId;
+    if (!handle || handle.length > 20 || handle.includes('=')) return null;
+    return `@${handle.replace(/^@/, '')}`;
+  };
+
   return (
     <header className="navbar-container" style={{
       height: '72px',
@@ -129,7 +135,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
               <div style={{ textAlign: 'left' }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff' }}>{user.name}</div>
-                <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600 }}>@{user.kingschatUserId || user.username}</div>
+                {getDisplayHandle(user) && (
+                  <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600 }}>{getDisplayHandle(user)}</div>
+                )}
               </div>
               <ChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-muted)' }} />
             </button>
@@ -142,10 +150,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}>
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#60a5fa', fontWeight: 700, margin: '2px 0' }}>
-                    @{user.kingschatUserId || user.username}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{user.email || `${(user.kingschatUserId || 'user').toLowerCase()}@ccpms.org`}</div>
+                  {getDisplayHandle(user) && (
+                    <div style={{ fontSize: '0.78rem', color: '#60a5fa', fontWeight: 700, margin: '2px 0' }}>
+                      {getDisplayHandle(user)}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{user.email || 'user@ccpms.org'}</div>
                   <div style={{
                     marginTop: '8px', fontSize: '0.7rem', fontWeight: 700,
                     color: isOFEM ? '#c084fc' : '#fbbf24',

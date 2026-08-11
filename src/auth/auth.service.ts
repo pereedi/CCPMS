@@ -155,14 +155,18 @@ export class AuthService {
       kcProfile = await this.verifyKingsChatToken(cleanInput);
     }
 
-    const username = kcProfile.username || kcProfile.id;
+    const rawUsername = kcProfile.username || kcProfile.id;
     const requestedRole = typeof tokenOrCodePayload === 'object' ? tokenOrCodePayload.requestedRole : undefined;
-    const configs = getAuthorizedUserConfigs(username, kcProfile);
+    const configs = getAuthorizedUserConfigs(rawUsername, kcProfile);
 
     // ROSTER ENFORCEMENT: Reject users not registered in authorized roster
     if (configs.length === 0) {
-      throw new Error(`Access Denied: KingsChat account @${username} is not registered as an authorized OFEM Executive or Assistant Director in CCPMS.`);
+      throw new Error(`Access Denied: KingsChat account @${rawUsername} is not registered as an authorized OFEM Executive or Assistant Director in CCPMS.`);
     }
+
+    const matchedConfig = configs[0];
+    const isBase64Id = rawUsername.length > 20 || rawUsername.includes('=');
+    const username = matchedConfig?.kingschatUsername || (isBase64Id ? (kcProfile.name ? kcProfile.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : rawUsername) : rawUsername);
 
     // UNIVERSAL PORTAL SELECTION: Prompt all authorized users to select OFEM or AD portal mode for session
     if (!requestedRole) {
@@ -177,9 +181,9 @@ export class AuthService {
 
       return {
         requiresRoleSelection: true,
-        username: kcProfile.name || username,
-        handle: username,
-        name: kcProfile.name || configs[0].name,
+        username: kcProfile.name || matchedConfig?.name || username,
+        handle: isBase64Id ? (matchedConfig?.kingschatUsername || null) : username,
+        name: kcProfile.name || matchedConfig?.name || 'Authorized Officer',
         avatar_url: kcProfile.avatar_url,
         tokenOrCodePayload,
         availableRoles: [

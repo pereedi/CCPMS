@@ -268,7 +268,7 @@ export const LoginScreen: React.FC = () => {
                 Dual Access Portal Select
               </h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-                Welcome <strong style={{ color: '#60a5fa' }}>@{dualRoleData.username}</strong>! You hold authorized roles for both Executive and Director levels.
+                Welcome <strong style={{ color: '#60a5fa' }}>{dualRoleData.handle && dualRoleData.handle.length <= 20 && !dualRoleData.handle.includes('=') ? `@${dualRoleData.handle.replace(/^@/, '')}` : (dualRoleData.name || dualRoleData.username)}</strong>! Select your access portal level for this session.
               </p>
             </div>
 
