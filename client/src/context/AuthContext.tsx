@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   currentRole: PortalRole | null;
   loginWithKingsChat: (token?: string) => Promise<void>;
+  setDirectSession: (accessToken: string, user?: User) => Promise<void>;
   logout: () => void;
   isKingsChatBypassActive: boolean;
 }
@@ -72,6 +73,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setDirectSession = async (accessToken: string, authUser?: User) => {
+    localStorage.setItem('ccpms_access_token', accessToken);
+    if (authUser) {
+      setUser(authUser);
+    } else {
+      try {
+        const res: any = await api.get('/auth/me');
+        if (res.success && res.data) {
+          setUser(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load user profile after OAuth session:', err);
+      }
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('ccpms_access_token');
     setUser(null);
@@ -87,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         currentRole,
         loginWithKingsChat,
+        setDirectSession,
         logout,
         isKingsChatBypassActive: true, // KingsChat security bypass enabled for dev/testing
       }}

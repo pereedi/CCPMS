@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Shield, Sparkles, ArrowRight, AlertTriangle, Lock } from 'lucide-react';
 
 export const LoginScreen: React.FC = () => {
-  const { loginWithKingsChat } = useAuth();
+  const { loginWithKingsChat, setDirectSession } = useAuth();
   const [customToken, setCustomToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingFor, setLoadingFor] = useState<'OFEM' | 'AD' | 'CUSTOM' | null>(null);
@@ -50,7 +50,7 @@ export const LoginScreen: React.FC = () => {
           window.removeEventListener('message', messageHandler);
           if (popup && !popup.closed) popup.close();
           try {
-            await loginWithKingsChat(event.data.token);
+            await setDirectSession(event.data.token, event.data.user);
           } catch (err: any) {
             setErrorMsg(err.message || 'KingsChat OAuth verification failed');
           } finally {

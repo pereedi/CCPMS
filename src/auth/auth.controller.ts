@@ -51,7 +51,7 @@ export class AuthController {
             <p>Welcome, ${result.user.name}</p>
             <script>
               if (window.opener) {
-                window.opener.postMessage({ type: 'KINGSCHAT_OAUTH_SUCCESS', token: "${result.accessToken}" }, '*');
+                window.opener.postMessage({ type: 'KINGSCHAT_OAUTH_SUCCESS', token: "${result.accessToken}", user: ${JSON.stringify(result.user)} }, '*');
                 window.close();
               } else {
                 localStorage.setItem('ccpms_access_token', "${result.accessToken}");

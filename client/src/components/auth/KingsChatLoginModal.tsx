@@ -8,7 +8,7 @@ interface KingsChatLoginModalProps {
 }
 
 export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen, onClose }) => {
-  const { loginWithKingsChat, isKingsChatBypassActive } = useAuth();
+  const { loginWithKingsChat, setDirectSession, isKingsChatBypassActive } = useAuth();
   const [customToken, setCustomToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -68,7 +68,7 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
           window.removeEventListener('message', messageHandler);
           if (popup && !popup.closed) popup.close();
           try {
-            await loginWithKingsChat(event.data.token);
+            await setDirectSession(event.data.token, event.data.user);
             if (onClose) onClose();
           } catch (err: any) {
             setErrorMsg(err.message || 'KingsChat OAuth verification failed');
