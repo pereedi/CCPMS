@@ -40,7 +40,30 @@ export class AuthController {
         `);
       }
 
-      const result = await authService.authenticateWithKingsChat({ code, origin });
+      const result: any = await authService.authenticateWithKingsChat({ code, origin });
+
+      if (result.requiresRoleSelection) {
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>KingsChat Role Selection Required</title></head>
+            <body style="background:#0a0f1a;color:#fff;font-family:sans-serif;text-align:center;padding-top:50px;">
+              <h2 style="color: #38bdf8;">Dual Access Level Detected</h2>
+              <p>Please select your access portal level...</p>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ type: 'KINGSCHAT_OAUTH_DUAL_ROLE', dualRoleData: ${JSON.stringify(result)} }, '*');
+                  window.close();
+                } else {
+                  sessionStorage.setItem('ccpms_dual_role_pending', JSON.stringify(${JSON.stringify(result)}));
+                  window.location.href = "${origin || '/'}?dual_role=1";
+                }
+              </script>
+            </body>
+          </html>
+        `);
+      }
+
       // Return HTML page that posts token back to client window or redirects
       return res.send(`
         <!DOCTYPE html>

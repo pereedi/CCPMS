@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   currentRole: PortalRole | null;
-  loginWithKingsChat: (token?: string) => Promise<void>;
+  loginWithKingsChat: (token?: string, requestedRole?: string) => Promise<any>;
   setDirectSession: (accessToken: string, user?: User) => Promise<void>;
   logout: () => void;
   isKingsChatBypassActive: boolean;
@@ -52,16 +52,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const loginWithKingsChat = async (token?: string) => {
+  const loginWithKingsChat = async (token?: string, requestedRole?: string) => {
     setIsLoading(true);
     try {
       const payloadToken = token || 'KC_DIRECTOR';
-      const res: any = await api.post('/auth/kingschat', { token: payloadToken });
+      const res: any = await api.post('/auth/kingschat', { token: payloadToken, requestedRole });
 
       if (res.success && res.data) {
+        if (res.data.requiresRoleSelection) {
+          return res.data;
+        }
         const { accessToken, user: authUser } = res.data;
         localStorage.setItem('ccpms_access_token', accessToken);
         setUser(authUser);
+        return res.data;
       } else {
         throw new Error(res.message || 'KingsChat authentication failed');
       }

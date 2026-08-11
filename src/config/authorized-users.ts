@@ -22,6 +22,13 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
     role: 'SUPER_ADMIN',
     email: 'admin@ccpms.org',
   },
+  {
+    kingschatUsername: 'pst_joy',
+    name: 'Directorate (OFEM Executive)',
+    role: 'SUPER_ADMIN',
+    email: 'admin@ccpms.org',
+  },
+
 
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
@@ -32,42 +39,56 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
     email: 'director.tech@ccpms.org',
   },
   {
-    kingschatUsername: 'fintech_ad',
+    kingschatUsername: 'pereedi3161',
+    name: 'Directorate (OFEM Executive)',
+    role: 'SUPER_ADMIN',
+    email: 'admin@ccpms.org',
+  },
+  {
+    kingschatUsername: 'alexdabest',
+    name: 'Technology & Digital Innovation Director',
+    role: 'DIRECTOR',
+    directorateCode: 'TECH_DIGITAL',
+    email: 'director.tech@ccpms.org',
+  },
+
+  {
+    kingschatUsername: 'ngbadebo',
     name: 'FinTech Products Director',
     role: 'DIRECTOR',
     directorateCode: 'FINTECH',
     email: 'director.fintech@ccpms.org',
   },
   {
-    kingschatUsername: 'socialmedia_ad',
+    kingschatUsername: 'pastorstar',
     name: 'Social Media & Distribution Director',
     role: 'DIRECTOR',
     directorateCode: 'SOCIAL_MEDIA',
     email: 'director.social@ccpms.org',
   },
   {
-    kingschatUsername: 'citizen_ad',
+    kingschatUsername: 'pst_joy',
     name: 'Citizen Engagement Director',
     role: 'DIRECTOR',
     directorateCode: 'CITIZEN_GLOBAL',
     email: 'director.citizen@ccpms.org',
   },
   {
-    kingschatUsername: 'research_ad',
+    kingschatUsername: 'pidegr8',
     name: 'Research & Data Intelligence Director',
     role: 'DIRECTOR',
     directorateCode: 'RESEARCH_DATA',
     email: 'director.research@ccpms.org',
   },
   {
-    kingschatUsername: 'content_ad',
+    kingschatUsername: 'pst_tope',
     name: 'Content & Media Production Director',
     role: 'DIRECTOR',
     directorateCode: 'CONTENT_MEDIA',
     email: 'director.content@ccpms.org',
   },
   {
-    kingschatUsername: 'digitalassets_ad',
+    kingschatUsername: 'bro_princewill',
     name: 'Digital Assets & Language Director',
     role: 'DIRECTOR',
     directorateCode: 'DIGITAL_ASSETS',
@@ -76,14 +97,28 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 ];
 
 /**
- * Finds an authorized user configuration by KingsChat username / handle
+ * Finds all matching authorized user configurations for a KingsChat username / handle.
+ * Used for dual-role detection (e.g. users registered as both OFEM Executive and Assistant Director).
  */
-export function getAuthorizedUserConfig(username: string): AuthorizedUserConfig | undefined {
-  if (!username) return undefined;
+export function getAuthorizedUserConfigs(username: string): AuthorizedUserConfig[] {
+  if (!username) return [];
   const clean = username.trim().toLowerCase().replace(/^@/, '');
-  return AUTHORIZED_USERS.find(
-    (u) => u.kingschatUsername.toLowerCase() === clean || u.kingschatUsername.toLowerCase() === username.trim().toLowerCase()
+  return AUTHORIZED_USERS.filter(
+    (u) => u.kingschatUsername.trim().toLowerCase().replace(/^@/, '') === clean
   );
+}
+
+/**
+ * Finds an authorized user configuration by KingsChat username / handle and optional requestedRole
+ */
+export function getAuthorizedUserConfig(username: string, requestedRole?: string): AuthorizedUserConfig | undefined {
+  const configs = getAuthorizedUserConfigs(username);
+  if (configs.length === 0) return undefined;
+  if (requestedRole) {
+    const found = configs.find((c) => c.role === requestedRole);
+    if (found) return found;
+  }
+  return configs[0];
 }
 
 /**

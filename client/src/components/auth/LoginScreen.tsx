@@ -9,6 +9,8 @@ export const LoginScreen: React.FC = () => {
   const [loadingFor, setLoadingFor] = useState<'OFEM' | 'AD' | 'CUSTOM' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [dualRoleData, setDualRoleData] = useState<any>(null);
+
   const handleCustomLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customToken.trim()) return;
@@ -16,12 +18,31 @@ export const LoginScreen: React.FC = () => {
     setLoadingFor('CUSTOM');
     setErrorMsg('');
     try {
-      await loginWithKingsChat(customToken.trim());
+      const res = await loginWithKingsChat(customToken.trim());
+      if (res && res.requiresRoleSelection) {
+        setDualRoleData(res);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Verification failed. Username not in authorized roster.');
     } finally {
       setLoading(false);
       setLoadingFor(null);
+    }
+  };
+
+  const handleSelectDualRole = async (selectedRole: string) => {
+    if (!dualRoleData) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const rawPayload = dualRoleData.tokenOrCodePayload || dualRoleData.originalPayload || dualRoleData.username;
+      const cleanToken = typeof rawPayload === 'string' ? rawPayload : (rawPayload.code || rawPayload.token || dualRoleData.username);
+      await loginWithKingsChat(cleanToken, selectedRole);
+      setDualRoleData(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Role selection failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,7 +67,12 @@ export const LoginScreen: React.FC = () => {
       );
 
       const messageHandler = async (event: MessageEvent) => {
-        if (event.data && event.data.type === 'KINGSCHAT_OAUTH_SUCCESS' && event.data.token) {
+        if (event.data && event.data.type === 'KINGSCHAT_OAUTH_DUAL_ROLE' && event.data.dualRoleData) {
+          window.removeEventListener('message', messageHandler);
+          if (popup && !popup.closed) popup.close();
+          setDualRoleData(event.data.dualRoleData);
+          setLoading(false);
+        } else if (event.data && event.data.type === 'KINGSCHAT_OAUTH_SUCCESS' && event.data.token) {
           window.removeEventListener('message', messageHandler);
           if (popup && !popup.closed) popup.close();
           try {
@@ -215,6 +241,86 @@ export const LoginScreen: React.FC = () => {
           Secured with KingsChat Auth · CCPMS Enterprise
         </div>
       </div>
+
+      {/* Dual Access Role Selection Modal */}
+      {dualRoleData && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(5, 8, 16, 0.88)', backdropFilter: 'blur(16px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+        }}>
+          <div className="glass-panel animate-fade-in" style={{
+            maxWidth: '480px', width: '100%', padding: '32px',
+            border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '24px',
+            background: 'linear-gradient(165deg, rgba(17, 24, 39, 0.98) 0%, rgba(10, 15, 26, 0.99) 100%)',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.2)'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{
+                width: '60px', height: '60px', borderRadius: '18px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #3b82f6 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 14px auto', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.35)'
+              }}>
+                <Shield style={{ width: '30px', height: '30px', color: '#ffffff' }} />
+              </div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', margin: '0 0 6px 0' }}>
+                Dual Access Portal Select
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                Welcome <strong style={{ color: '#60a5fa' }}>@{dualRoleData.username}</strong>! You hold authorized roles for both Executive and Director levels.
+              </p>
+            </div>
+
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
+              Select Portal Mode for this Session:
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {dualRoleData.availableRoles?.map((item: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectDualRole(item.role)}
+                  disabled={loading}
+                  className="btn btn-secondary"
+                  style={{
+                    justifyContent: 'space-between', padding: '16px 18px',
+                    textAlign: 'left', borderRadius: '14px',
+                    borderColor: item.role === 'SUPER_ADMIN' ? 'rgba(139, 92, 246, 0.4)' : 'rgba(59, 130, 246, 0.4)',
+                    background: item.role === 'SUPER_ADMIN' ? 'rgba(139, 92, 246, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{item.role === 'SUPER_ADMIN' ? '👑' : '🏢'}</span>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>
+                        {item.portalLabel}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: item.role === 'SUPER_ADMIN' ? '#c084fc' : '#60a5fa', marginTop: '3px', fontWeight: 500 }}>
+                        {item.description}
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRight style={{ width: '18px', height: '18px', color: item.role === 'SUPER_ADMIN' ? '#c084fc' : '#60a5fa' }} />
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setDualRoleData(null)}
+              style={{
+                marginTop: '20px', width: '100%', background: 'transparent',
+                border: '1px solid var(--border-color)', borderRadius: '12px',
+                padding: '10px', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer'
+              }}
+            >
+              Cancel Sign In
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeSlideUp {

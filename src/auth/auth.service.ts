@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
-import { getAuthorizedUserConfig } from '../config/authorized-users';
+import { getAuthorizedUserConfig, getAuthorizedUserConfigs } from '../config/authorized-users';
 
 export interface KingsChatProfile {
   id: string;
@@ -156,13 +156,43 @@ export class AuthService {
     }
 
     const username = kcProfile.username || kcProfile.id;
-    const config = getAuthorizedUserConfig(username) || getAuthorizedUserConfig(cleanInput);
+    const requestedRole = typeof tokenOrCodePayload === 'object' ? tokenOrCodePayload.requestedRole : undefined;
+    const configs = getAuthorizedUserConfigs(username);
 
     // ROSTER ENFORCEMENT: Reject users not registered in authorized roster
-    if (!config) {
+    if (configs.length === 0) {
       throw new Error(`Access Denied: KingsChat account @${username} is not registered as an authorized OFEM Executive or Assistant Director in CCPMS.`);
     }
 
+    // DUAL-ROLE ENFORCEMENT: If user is registered as both OFEM and AD, prompt for role selection if not already requested
+    if (configs.length > 1 && !requestedRole) {
+      const directorates = await prisma.directorate.findMany({ select: { id: true, name: true, code: true } });
+      const dirMap = new Map(directorates.map((d) => [d.code, d]));
+
+      return {
+        requiresRoleSelection: true,
+        username,
+        name: kcProfile.name || configs[0].name,
+        avatar_url: kcProfile.avatar_url,
+        tokenOrCodePayload,
+        availableRoles: configs.map((c) => {
+          const dirInfo = c.directorateCode ? dirMap.get(c.directorateCode) : null;
+          return {
+            role: c.role,
+            directorateCode: c.directorateCode || null,
+            directorateName: dirInfo?.name || c.name,
+            portalLabel: c.role === 'SUPER_ADMIN'
+              ? 'Office of Executive Minister (OFEM)'
+              : `Assistant Director — ${dirInfo?.name || c.name}`,
+            description: c.role === 'SUPER_ADMIN'
+              ? 'Executive Level: Controls, Approvals & All 7 Directorates'
+              : `Directorate Level: ${dirInfo?.name || c.name} Reporting`,
+          };
+        }),
+      };
+    }
+
+    const config = getAuthorizedUserConfig(username, requestedRole) || configs[0];
     const effectiveRole = config ? config.role : (username === 'pereedi' || username === 'KC_SUPERADMIN' ? 'SUPER_ADMIN' : 'DIRECTOR');
     const effectiveDirCode = config?.directorateCode || (effectiveRole === 'DIRECTOR' ? 'TECH_DIGITAL' : undefined);
     const isOFEM = effectiveRole === 'SUPER_ADMIN';
