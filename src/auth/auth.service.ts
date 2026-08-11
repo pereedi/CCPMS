@@ -96,7 +96,7 @@ export class AuthService {
     if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'pereedi3161' || cleanToken === 'alexdabest') {
       return {
         id: 'pereedi3161',
-        name: 'Directorate (OFEM Executive)',
+        name: 'pereedi3161',
         username: 'pereedi3161',
         email: 'admin@ccpms.org',
         phone: '+2348000000001',
@@ -107,7 +107,7 @@ export class AuthService {
     if (cleanToken === 'KC_DIRECTOR' || cleanToken === 'pereedi') {
       return {
         id: 'pereedi',
-        name: 'Technology & Digital Innovation Director',
+        name: 'pereedi',
         username: 'pereedi',
         email: 'director.tech@ccpms.org',
         phone: '+2348000000002',
@@ -123,7 +123,7 @@ export class AuthService {
       const mockId = cleanToken.startsWith('KC_') ? cleanToken : cleanToken.replace(/[^a-zA-Z0-9_]/g, '');
       return {
         id: mockId,
-        name: cleanToken.includes('@') ? cleanToken.split('@')[0] : `KingsChat User (${cleanToken})`,
+        name: cleanToken.includes('@') ? cleanToken.split('@')[0] : mockId,
         username: mockId,
         email: cleanToken.includes('@') ? cleanToken : `${mockId.toLowerCase()}@kingschat.net`,
         phone: '+2348000000000',
@@ -181,9 +181,9 @@ export class AuthService {
 
       return {
         requiresRoleSelection: true,
-        username: kcProfile.name || matchedConfig?.name || username,
+        username: (kcProfile.name && !kcProfile.name.startsWith('KingsChat User')) ? kcProfile.name : (matchedConfig?.name || username),
         handle: isBase64Id ? (matchedConfig?.kingschatUsername || null) : username,
-        name: kcProfile.name || matchedConfig?.name || 'Authorized Officer',
+        name: (kcProfile.name && !kcProfile.name.startsWith('KingsChat User')) ? kcProfile.name : (matchedConfig?.name || username),
         avatar_url: kcProfile.avatar_url,
         tokenOrCodePayload,
         availableRoles: [
@@ -202,7 +202,7 @@ export class AuthService {
       };
     }
 
-    const config = getAuthorizedUserConfig(username, requestedRole, kcProfile) || configs[0];
+    const config = getAuthorizedUserConfig(rawUsername, requestedRole, kcProfile) || matchedConfig;
     const effectiveRole = requestedRole || config?.role || 'SUPER_ADMIN';
     const effectiveDirCode = effectiveRole === 'DIRECTOR' ? (config?.directorateCode || 'TECH_DIGITAL') : undefined;
     const isOFEM = effectiveRole === 'SUPER_ADMIN';
@@ -218,13 +218,15 @@ export class AuthService {
       dbDir = await prisma.directorate.findUnique({ where: { code: effectiveDirCode } });
     }
 
+    const resolvedName = config?.kingschatUsername || username;
+
     // Upsert User in database with bound Role and Directorate
     let user: any = null;
     try {
       user = await prisma.user.upsert({
         where: { kingschatUserId: username },
         update: {
-          name: kcProfile.name || config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
+          name: resolvedName,
           email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
           phone: kcProfile.phone || config?.phone || '+2348000000000',
           profilePhoto: kcProfile.avatar_url,
@@ -234,7 +236,7 @@ export class AuthService {
         },
         create: {
           kingschatUserId: username,
-          name: kcProfile.name || config?.name || (isOFEM ? 'OFEM Executive' : 'AD Director'),
+          name: resolvedName,
           email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
           phone: kcProfile.phone || config?.phone || '+2348000000000',
           profilePhoto: kcProfile.avatar_url,
@@ -284,6 +286,7 @@ export class AuthService {
         profilePhoto: user?.profilePhoto || kcProfile.avatar_url,
         status: 'ACTIVE',
         role: userRole,
+        directorateRole: isOFEM ? 'OFEM Executive Minister' : (config?.directorateRole || (userDir?.name ? `${userDir.name} Director` : 'Assistant Director')),
         permissions: isOFEM
           ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
           : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],

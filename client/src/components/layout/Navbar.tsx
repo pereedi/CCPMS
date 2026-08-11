@@ -134,10 +134,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'; }}
               />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff' }}>{user.name}</div>
-                {getDisplayHandle(user) && (
-                  <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600 }}>{getDisplayHandle(user)}</div>
-                )}
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
+                  @{ (user.kingschatUserId || user.username || user.name || 'user').replace(/^@/, '') }
+                </div>
               </div>
               <ChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-muted)' }} />
             </button>
@@ -149,19 +148,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '14px'
               }}>
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff' }}>{user.name}</div>
-                  {getDisplayHandle(user) && (
-                    <div style={{ fontSize: '0.78rem', color: '#60a5fa', fontWeight: 700, margin: '2px 0' }}>
-                      {getDisplayHandle(user)}
-                    </div>
-                  )}
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{user.email || 'user@ccpms.org'}</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+                    @{ (user.kingschatUserId || user.username || user.name || 'user').replace(/^@/, '') }
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{user.email || 'user@ccpms.org'}</div>
                   <div style={{
-                    marginTop: '8px', fontSize: '0.7rem', fontWeight: 700,
+                    marginTop: '8px', fontSize: '0.72rem', fontWeight: 700,
                     color: isOFEM ? '#c084fc' : '#fbbf24',
                     display: 'flex', alignItems: 'center', gap: '4px',
                   }}>
-                    {isOFEM ? '👑 Office of Executive Minister (OFEM)' : '🏢 AD — Assistant Director'}
+                    {isOFEM ? '👑 Office of Executive Minister (OFEM)' : `🏢 ${user.directorateRole || (user.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director')}`}
                   </div>
                 </div>
 

@@ -11,6 +11,7 @@ export interface User {
   profilePhoto?: string;
   status: string;
   role: string;
+  directorateRole?: string;
   permissions: string[];
   directorate?: {
     id: string;

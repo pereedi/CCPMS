@@ -7,6 +7,7 @@ export interface AuthorizedUserConfig {
   name: string;
   role: 'SUPER_ADMIN' | 'DIRECTOR';
   directorateCode?: string; // TECH_DIGITAL, FINTECH, SOCIAL_MEDIA, CITIZEN_GLOBAL, RESEARCH_DATA, CONTENT_MEDIA, DIGITAL_ASSETS
+  directorateRole?: string; // e.g. "Technology & Digital Innovation Director", "OFEM Executive Minister"
   email?: string;
   phone?: string;
 }
@@ -20,20 +21,23 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   {
     kingschatUsername: 'pereedi3161',
     aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
-    name: 'Directorate (OFEM Executive)',
+    name: 'pereedi3161',
     role: 'SUPER_ADMIN',
+    directorateRole: 'OFEM Executive Minister',
     email: 'admin@ccpms.org',
   },
   {
     kingschatUsername: 'pst_joy',
-    name: 'Directorate (OFEM Executive)',
+    name: 'pst_joy',
     role: 'SUPER_ADMIN',
+    directorateRole: 'OFEM Executive Minister',
     email: 'admin@ccpms.org',
   },
   {
     kingschatUsername: 'pereedi',
-    name: 'Directorate (OFEM Executive)',
+    name: 'pereedi',
     role: 'SUPER_ADMIN',
+    directorateRole: 'OFEM Executive Minister',
     email: 'admin@ccpms.org',
   },
 
@@ -41,59 +45,67 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
     kingschatUsername: 'pereedi',
-    name: 'Technology & Digital Innovation Director',
+    name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
+    directorateRole: 'Technology & Digital Innovation Director',
     email: 'director.tech@ccpms.org',
   },
   {
     kingschatUsername: 'alexdabest',
-    name: 'Technology & Digital Innovation Director',
+    name: 'alexdabest',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
+    directorateRole: 'Technology & Digital Innovation Director',
     email: 'director.tech@ccpms.org',
   },
 
   {
     kingschatUsername: 'ngbadebo',
-    name: 'FinTech Products Director',
+    name: 'ngbadebo',
     role: 'DIRECTOR',
     directorateCode: 'FINTECH',
+    directorateRole: 'FinTech Products Director',
     email: 'director.fintech@ccpms.org',
   },
   {
     kingschatUsername: 'pastorstar',
-    name: 'Social Media & Distribution Director',
+    name: 'pastorstar',
     role: 'DIRECTOR',
     directorateCode: 'SOCIAL_MEDIA',
+    directorateRole: 'Social Media & Distribution Director',
     email: 'director.social@ccpms.org',
   },
   {
     kingschatUsername: 'pst_joy',
-    name: 'Citizen Engagement Director',
+    name: 'pst_joy',
     role: 'DIRECTOR',
     directorateCode: 'CITIZEN_GLOBAL',
+    directorateRole: 'Citizen Engagement Director',
     email: 'director.citizen@ccpms.org',
   },
   {
     kingschatUsername: 'pidegr8',
-    name: 'Research & Data Intelligence Director',
+    name: 'pidegr8',
     role: 'DIRECTOR',
     directorateCode: 'RESEARCH_DATA',
+    directorateRole: 'Research & Data Intelligence Director',
     email: 'director.research@ccpms.org',
   },
   {
     kingschatUsername: 'pst_tope',
-    name: 'Content & Media Production Director',
+    name: 'pst_tope',
     role: 'DIRECTOR',
     directorateCode: 'CONTENT_MEDIA',
+    directorateRole: 'Content & Media Production Director',
     email: 'director.content@ccpms.org',
   },
   {
     kingschatUsername: 'bro_princewill',
-    name: 'Digital Assets & Language Director',
+    name: 'bro_princewill',
     role: 'DIRECTOR',
     directorateCode: 'DIGITAL_ASSETS',
+    directorateRole: 'Digital Assets & Language Director',
     email: 'director.assets@ccpms.org',
   },
 ];
@@ -142,10 +154,19 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
     if (matches.length > 0) return matches;
   }
 
-  // Step 4: Fallback for OAuth authenticated KingsChat users
+  // Step 4: Fallback for OAuth authenticated KingsChat users (uses THEIR OWN credentials)
   if (profile && (profile.id || profile.username)) {
-    logger.info(`[UserRoster] KingsChat OAuth profile authenticated for ${profile.name || profile.username || profile.id}, providing portal authorization options.`);
-    return AUTHORIZED_USERS;
+    const userHandle = profile.username || profile.id;
+    logger.info(`[UserRoster] KingsChat OAuth profile authenticated for ${userHandle}`);
+    return [
+      {
+        kingschatUsername: userHandle,
+        name: userHandle,
+        role: 'DIRECTOR',
+        directorateCode: 'TECH_DIGITAL',
+        email: profile.email || `${userHandle.toLowerCase()}@ccpms.org`,
+      },
+    ];
   }
 
   return [];
