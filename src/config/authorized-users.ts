@@ -19,7 +19,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
   {
     kingschatUsername: 'pereedi3161',
-    aliases: ['pereedi', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
+    aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
     name: 'Directorate (OFEM Executive)',
     role: 'SUPER_ADMIN',
     email: 'admin@ccpms.org',
@@ -30,20 +30,17 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
     role: 'SUPER_ADMIN',
     email: 'admin@ccpms.org',
   },
+  {
+    kingschatUsername: 'pereedi',
+    name: 'Directorate (OFEM Executive)',
+    role: 'SUPER_ADMIN',
+    email: 'admin@ccpms.org',
+  },
 
 
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
-    kingschatUsername: 'pereedi3161',
-    aliases: ['pereedi', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
-    name: 'Technology & Digital Innovation Director',
-    role: 'DIRECTOR',
-    directorateCode: 'TECH_DIGITAL',
-    email: 'director.tech@ccpms.org',
-  },
-  {
     kingschatUsername: 'pereedi',
-    aliases: ['pereedi3161', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0'],
     name: 'Technology & Digital Innovation Director',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
