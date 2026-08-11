@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Send, FileSpreadsheet, Target, TrendingUp, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2 } from 'lucide-react';
+import { Send, FileSpreadsheet, Target, TrendingUp, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2, Briefcase, Plus, Trash2, FolderKanban } from 'lucide-react';
 import { EspIcon } from '../common/EspIcon';
+
+interface ProjectFormItem {
+  id?: string;
+  name: string;
+  code?: string;
+  progress: number;
+  status: string;
+  spent: string;
+  budget: string;
+  milestones: string;
+}
 
 interface DirectorReportFormProps {
   editReportData?: any;
@@ -63,6 +74,18 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [keyRoles, setKeyRoles] = useState('');
   const [staffingGaps, setStaffingGaps] = useState('');
 
+  // Section 6: Directorate Active Projects & Deliverables Tracking
+  const [projects, setProjects] = useState<ProjectFormItem[]>([
+    {
+      name: 'CCPMS Enterprise Command System',
+      progress: 75,
+      status: 'IN_PROGRESS',
+      spent: '45000',
+      budget: '120000',
+      milestones: 'Core architecture and reporting form completed'
+    }
+  ]);
+
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -70,6 +93,54 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   useEffect(() => {
     fetchDirectorates();
   }, []);
+
+  useEffect(() => {
+    if (selectedDirectorateId) {
+      fetchDirectorateProjects(selectedDirectorateId);
+    }
+  }, [selectedDirectorateId]);
+
+  const fetchDirectorateProjects = async (dirId: string) => {
+    try {
+      const res: any = await api.get(`/projects?directorateId=${dirId}`);
+      if (res.success && res.data && res.data.length > 0) {
+        setProjects(res.data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          code: p.code,
+          progress: p.progress || 0,
+          status: p.status || 'IN_PROGRESS',
+          spent: String(p.spent || 0),
+          budget: String(p.budget || 0),
+          milestones: p.description || '',
+        })));
+      }
+    } catch (_) {}
+  };
+
+  const handleAddProject = () => {
+    setProjects([
+      ...projects,
+      {
+        name: '',
+        progress: 0,
+        status: 'IN_PROGRESS',
+        spent: '0',
+        budget: '50000',
+        milestones: '',
+      }
+    ]);
+  };
+
+  const handleRemoveProject = (index: number) => {
+    setProjects(projects.filter((_, i) => i !== index));
+  };
+
+  const handleProjectChange = (index: number, field: keyof ProjectFormItem, value: any) => {
+    const updated = [...projects];
+    updated[index] = { ...updated[index], [field]: value };
+    setProjects(updated);
+  };
 
   // Lock directorate to user's assigned directorate from KingsChat login
   useEffect(() => {
@@ -121,6 +192,10 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         if (parsed.staffing.headcount) setHeadcount(String(parsed.staffing.headcount));
         if (parsed.staffing.keyRoles) setKeyRoles(parsed.staffing.keyRoles);
         if (parsed.staffing.gaps) setStaffingGaps(parsed.staffing.gaps);
+      }
+
+      if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+        setProjects(parsed.projects);
       }
     }
   }, [editReportData]);
@@ -230,6 +305,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         keyRoles,
         gaps: staffingGaps,
       },
+      projects,
     };
 
     const targetVal = financialTarget.trim() ? parseFloat(financialTarget.replace(/,/g, '')).toLocaleString() : '0';
@@ -701,6 +777,139 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
               onChange={(e) => setStaffingGaps(e.target.value)}
             />
           </div>
+        </div>
+
+        {/* SECTION 6: DIRECTORATE PROJECTS TRACKING */}
+        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+              <Briefcase style={{ width: '20px', height: '20px', color: 'var(--accent-blue)' }} />
+              Section 6: Directorate Active Projects & Deliverables Tracking
+            </h3>
+            <button
+              type="button"
+              onClick={handleAddProject}
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Plus style={{ width: '14px', height: '14px' }} />
+              Add Project
+            </button>
+          </div>
+
+          {projects.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px' }}>
+              No active projects listed. Click "Add Project" to add your Directorate's key projects.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {projects.map((proj, idx) => (
+                <div key={idx} style={{
+                  background: 'rgba(15, 23, 42, 0.5)',
+                  border: '1px solid var(--border-color)',
+                  padding: '18px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                        Project Title #{idx + 1}
+                      </label>
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder="e.g. CCPMS Mobile Client Integration"
+                        value={proj.name}
+                        onChange={(e) => handleProjectChange(idx, 'name', e.target.value)}
+                      />
+                    </div>
+
+                    <div style={{ width: '160px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                        Status
+                      </label>
+                      <select
+                        className="input-field"
+                        value={proj.status}
+                        onChange={(e) => handleProjectChange(idx, 'status', e.target.value)}
+                        style={{ fontSize: '0.85rem' }}
+                      >
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="ON_HOLD">On Hold</option>
+                        <option value="RISKY">Risky / Delayed</option>
+                        <option value="PLANNING">Planning</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProject(idx)}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        marginTop: '18px'
+                      }}
+                      title="Remove Project"
+                    >
+                      <Trash2 style={{ width: '16px', height: '16px' }} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Completion Progress</span>
+                        <span style={{ fontWeight: 800, color: '#60a5fa' }}>{proj.progress}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={proj.progress}
+                        onChange={(e) => handleProjectChange(idx, 'progress', parseInt(e.target.value, 10))}
+                        style={{ width: '100%', cursor: 'pointer', accentColor: '#3b82f6' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                        Spent Budget (Espees - ESP)
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="input-field"
+                        placeholder="e.g. 45000"
+                        value={proj.spent}
+                        onChange={(e) => handleProjectChange(idx, 'spent', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Key Milestones & Deliverables Highlight
+                    </label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="e.g. Released v1.2 API endpoints, updated database schemas..."
+                      value={proj.milestones}
+                      onChange={(e) => handleProjectChange(idx, 'milestones', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Submit Action */}

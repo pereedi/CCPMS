@@ -215,6 +215,81 @@ export async function syncReportMetricsToKPIs(reportId: string) {
     } catch (_) {}
   }
 
+  // 4. Directorate Projects Synchronization & Tracking
+  if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+    for (const projData of parsed.projects) {
+      if (!projData.name || !projData.name.trim()) continue;
+
+      const cleanCode = (projData.code || `PROJ_${dir.code}_${Date.now()}`).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+      const progressVal = Math.min(Math.max(parseFloat(String(projData.progress || 0).replace(/,/g, '')) || 0, 0), 100);
+      const spentVal = parseFloat(String(projData.spent || 0).replace(/,/g, '')) || 0;
+      const budgetVal = parseFloat(String(projData.budget || 0).replace(/,/g, '')) || 0;
+
+      try {
+        if (projData.id) {
+          await prisma.project.update({
+            where: { id: projData.id },
+            data: {
+              name: projData.name,
+              progress: progressVal,
+              spent: spentVal,
+              budget: budgetVal > 0 ? budgetVal : undefined,
+              status: projData.status || (progressVal >= 100 ? 'COMPLETED' : 'IN_PROGRESS'),
+              description: projData.description || projData.milestones || undefined,
+            },
+          });
+        } else {
+          await prisma.project.upsert({
+            where: { code: cleanCode },
+            update: {
+              name: projData.name,
+              progress: progressVal,
+              spent: spentVal,
+              budget: budgetVal > 0 ? budgetVal : undefined,
+              status: projData.status || (progressVal >= 100 ? 'COMPLETED' : 'IN_PROGRESS'),
+              description: projData.description || projData.milestones,
+            },
+            create: {
+              name: projData.name,
+              code: cleanCode,
+              directorateId: dir.id,
+              progress: progressVal,
+              spent: spentVal,
+              budget: budgetVal > 0 ? budgetVal : 100000,
+              status: projData.status || 'IN_PROGRESS',
+              description: projData.description || projData.milestones,
+            },
+          });
+        }
+      } catch (err: any) {
+        console.warn(`[ProjectSync] Failed to sync project ${projData.name}:`, err.message);
+      }
+    }
+  }
+
+  // 5. Send Real-time Notification & Digest to OFEM Executive Officers (SUPER_ADMIN)
+  try {
+    const ofemUsers = await prisma.user.findMany({
+      where: { role: { name: 'SUPER_ADMIN' } },
+    });
+
+    const projSummary = Array.isArray(parsed.projects) && parsed.projects.length > 0
+      ? parsed.projects.map((p: any) => `${p.name} (${p.progress || 0}%)`).join(', ')
+      : 'Operational tasks submitted';
+
+    for (const ofem of ofemUsers) {
+      await prisma.notification.create({
+        data: {
+          userId: ofem.id,
+          title: `📊 [${dir.name}] Report & Projects Submitted`,
+          message: `Operational report "${report.title}" submitted. Tracked Projects: ${projSummary}. Overall Goal Achievement: ${parsed.percentageAchievement || 90}%.`,
+          type: 'APPROVAL_REQUEST',
+          link: `/reports/${report.id}`,
+        },
+      });
+    }
+  } catch (_) {}
+
   // Trigger directorate overall KPI score recalculation
   await recalculateDirectorateKpiSummary(dir.id);
 }
