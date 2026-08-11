@@ -93,11 +93,11 @@ export class AuthService {
     }
 
     // Direct mock token shortcuts
-    if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'alexdabest') {
+    if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'pereedi3161' || cleanToken === 'alexdabest') {
       return {
-        id: 'alexdabest',
+        id: 'pereedi3161',
         name: 'Directorate (OFEM Executive)',
-        username: 'alexdabest',
+        username: 'pereedi3161',
         email: 'admin@ccpms.org',
         phone: '+2348000000001',
         avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',

@@ -138,7 +138,7 @@ export const LoginScreen: React.FC = () => {
             fontSize: '1.6rem', fontWeight: 900, color: '#ffffff',
             letterSpacing: '-0.03em', marginBottom: '6px',
           }}>
-            MISSION CONTROL
+            COMMAND AND CONTROL
             <span style={{
               marginLeft: '10px', fontSize: '0.8rem', fontWeight: 700,
               padding: '2px 10px', borderRadius: '6px',
@@ -147,7 +147,7 @@ export const LoginScreen: React.FC = () => {
             }}>CCPMS</span>
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Command &amp; Control Performance Management System
+            Command and Control Performance System
           </p>
         </div>
 
@@ -192,7 +192,7 @@ export const LoginScreen: React.FC = () => {
             <strong style={{ color: '#60a5fa', display: 'block', marginBottom: '2px' }}>
               Authorized Roster Enforcement Active
             </strong>
-            Login with KingsChat automatically verifies your registered handle (e.g. <code>pereedi</code> for OFEM, <code>alexdabest</code> for Tech AD) and routes you to your authorized portal.
+            Login with KingsChat automatically verifies your registered handle (e.g. <code>lydia_OFEM</code> for OFEM, <code>johnson_AD</code> for Tech AD) and routes you to your authorized portal.
           </div>
         </div>
 
@@ -209,44 +209,10 @@ export const LoginScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Custom Roster Handle Form for Manual Roster Testing */}
-        <form onSubmit={handleCustomLogin} style={{
-          borderTop: '1px solid var(--border-color)', paddingTop: '20px',
-          display: 'flex', flexDirection: 'column', gap: '10px',
-        }}>
-          <div style={{
-            fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-          }}>
-            Or Sign In with Authorized KingsChat Username
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              id="custom-token-input"
-              type="text"
-              placeholder="e.g. pereedi, alexdabest, or fintech_ad"
-              value={customToken}
-              onChange={e => setCustomToken(e.target.value)}
-              className="input-field"
-              style={{ flex: 1, fontSize: '0.85rem' }}
-              disabled={loading}
-            />
-            <button
-              id="custom-login-btn"
-              type="submit"
-              disabled={loading || !customToken.trim()}
-              className="btn btn-kingschat"
-              style={{ whiteSpace: 'nowrap' }}
-            >
-              {loadingFor === 'CUSTOM' ? 'Verifying...' : 'Sign In'}
-            </button>
-          </div>
-        </form>
-
         {/* Footer */}
         <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
           <Lock style={{ width: '12px', height: '12px' }} />
-          Secured with KingsChat Auth · CCPMS v2.0 Testing Phase
+          Secured with KingsChat Auth · CCPMS Enterprise
         </div>
       </div>
 

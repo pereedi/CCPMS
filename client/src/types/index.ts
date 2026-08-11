@@ -4,6 +4,7 @@ export type PortalRole = 'OFEM' | 'AD';
 export interface User {
   id: string;
   kingschatUserId: string;
+  username?: string;
   name: string;
   email?: string;
   phone?: string;

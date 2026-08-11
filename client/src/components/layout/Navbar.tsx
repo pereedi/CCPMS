@@ -60,13 +60,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              MISSION CONTROL{' '}
+              COMMAND & CONTROL{' '}
               <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                 CCPMS
               </span>
             </h1>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-              Command & Control Performance Management System
+              Command and Control Performance System
             </p>
           </div>
         </div>
@@ -128,7 +128,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'; }}
               />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{user.name}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff' }}>{user.name}</div>
+                <div style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: 600 }}>@{user.kingschatUserId || user.username}</div>
               </div>
               <ChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-muted)' }} />
             </button>
@@ -136,13 +137,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             {showDropdown && (
               <div className="glass-panel animate-fade-in" style={{
                 position: 'absolute', top: '48px', right: 0,
-                width: '240px', padding: '12px', zIndex: 1000, background: '#111827',
+                width: '250px', padding: '14px', zIndex: 1000, background: '#111827',
+                border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '14px'
               }}>
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{user.email || user.kingschatUserId}</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff' }}>{user.name}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#60a5fa', fontWeight: 700, margin: '2px 0' }}>
+                    @{user.kingschatUserId || user.username}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{user.email || `${(user.kingschatUserId || 'user').toLowerCase()}@ccpms.org`}</div>
                   <div style={{
-                    marginTop: '6px', fontSize: '0.7rem', fontWeight: 700,
+                    marginTop: '8px', fontSize: '0.7rem', fontWeight: 700,
                     color: isOFEM ? '#c084fc' : '#fbbf24',
                     display: 'flex', alignItems: 'center', gap: '4px',
                   }}>

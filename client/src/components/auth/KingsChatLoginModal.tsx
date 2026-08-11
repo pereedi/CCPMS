@@ -142,7 +142,7 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
             KingsChat Sign-In
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-            Mission Control Performance Management System (CCPMS)
+            Command and Control Performance System (CCPMS)
           </p>
         </div>
 
@@ -291,31 +291,6 @@ export const KingsChatLoginModal: React.FC<KingsChatLoginModalProps> = ({ isOpen
             </select>
           </div>
         </div>
-
-        {/* Custom KingsChat handle form */}
-        <form onSubmit={handleCustomLogin} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
-            Or Enter Custom KingsChat Username / Token
-          </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
-              placeholder="e.g. fintech_ad or kingschat_user_123"
-              value={customToken}
-              onChange={(e) => setCustomToken(e.target.value)}
-              className="input-field"
-              style={{ flex: 1 }}
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading || !customToken.trim()}
-              className="btn btn-kingschat"
-            >
-              {loading ? 'Authenticating...' : 'Sign In'}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
