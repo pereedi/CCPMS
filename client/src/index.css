@@ -204,8 +204,20 @@ input[type="date"] {
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: brightness(0) invert(1) !important;
+  opacity: 1 !important;
   cursor: pointer;
+}
+
+/* Hide number input spinner arrows (increase/decrease steppers) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* Table Responsive Scrolling Container */

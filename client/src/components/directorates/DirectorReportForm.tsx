@@ -183,7 +183,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     }
 
     if (financialTarget.trim()) {
-      const fTarget = parseFloat(financialTarget);
+      const fTarget = parseFloat(financialTarget.replace(/,/g, ''));
       if (isNaN(fTarget) || fTarget < 0) {
         setErrorMsg('⚠️ Financial Target must be a valid non-negative number.');
         return;
@@ -191,7 +191,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     }
 
     if (financialAchievement.trim()) {
-      const fAchieved = parseFloat(financialAchievement);
+      const fAchieved = parseFloat(financialAchievement.replace(/,/g, ''));
       if (isNaN(fAchieved) || fAchieved < 0) {
         setErrorMsg('⚠️ Financial Achievement must be a valid non-negative number.');
         return;
@@ -199,7 +199,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     }
 
     if (headcount.trim()) {
-      const hCount = parseInt(headcount, 10);
+      const hCount = parseInt(headcount.replace(/,/g, ''), 10);
       if (isNaN(hCount) || hCount < 0) {
         setErrorMsg('⚠️ Staff Headcount must be a valid non-negative number.');
         return;
@@ -232,8 +232,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       },
     };
 
-    const targetVal = financialTarget.trim() ? parseFloat(financialTarget).toLocaleString() : '0';
-    const achievedVal = financialAchievement.trim() ? parseFloat(financialAchievement).toLocaleString() : '0';
+    const targetVal = financialTarget.trim() ? parseFloat(financialTarget.replace(/,/g, '')).toLocaleString() : '0';
+    const achievedVal = financialAchievement.trim() ? parseFloat(financialAchievement.replace(/,/g, '')).toLocaleString() : '0';
     const headcountVal = headcount.trim() ? headcount : 'N/A';
 
     const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: ${achievedVal} ESP of ${targetVal} ESP Target. Headcount: ${headcountVal} Staff.`;
@@ -576,8 +576,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                 Financial Target (Espees - ESP)
               </label>
               <input
-                type="number"
-                step="any"
+                type="text"
+                inputMode="numeric"
                 className="input-field"
                 placeholder="e.g. 150000"
                 value={financialTarget}
@@ -590,8 +590,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                 Financial Achievement (Espees - ESP)
               </label>
               <input
-                type="number"
-                step="any"
+                type="text"
+                inputMode="numeric"
                 className="input-field"
                 placeholder="e.g. 135000"
                 value={financialAchievement}
@@ -666,7 +666,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                 Active Headcount (Staff Count)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 className="input-field"
                 placeholder="e.g. 12"
                 value={headcount}
