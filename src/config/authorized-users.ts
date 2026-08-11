@@ -17,7 +17,7 @@ export interface AuthorizedUserConfig {
 export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
   {
-    kingschatUsername: 'pereedi',
+    kingschatUsername: 'alexdabest',
     name: 'Directorate (OFEM Executive)',
     role: 'SUPER_ADMIN',
     email: 'admin@ccpms.org',
@@ -25,7 +25,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
-    kingschatUsername: 'alexdabest',
+    kingschatUsername: 'pereedi',
     name: 'Technology & Digital Innovation Director',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
