@@ -18,16 +18,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isOFEM = currentRole === 'OFEM';
 
-  const getAvatarUrl = (user: any) => {
-    if (user?.profilePhoto && !user.profilePhoto.includes('avatar.kingschat.net')) {
-      return user.profilePhoto;
+  /** Get the clean @handle to display — always from kingschatUserId (resolved by auth service) */
+  const displayHandle = (user?.kingschatUserId || user?.username || '').replace(/^@/, '');
+
+  /** Get avatar: prefer profilePhoto from KC OAuth, fall back to avatar.kingschat.net with clean handle only */
+  const getAvatarUrl = (u: any) => {
+    if (u?.profilePhoto && u.profilePhoto.startsWith('http') && !u.profilePhoto.includes('undefined')) {
+      return u.profilePhoto;
     }
-    const handle = user?.kingschatUserId || user?.username;
-    if (!handle || handle.length > 20 || handle.includes('/') || handle.includes('=')) {
-      return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+    const handle = u?.kingschatUserId || u?.username;
+    if (!handle || handle.length > 25 || handle.includes('/') || handle.includes('=') || handle.includes('+')) {
+      return isOFEM
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
     }
     return `https://avatar.kingschat.net/${handle.replace(/^@/, '')}`;
   };
+
+  /** Get role label — OFEM or directorate title */
+  const roleLabel = isOFEM
+    ? '👑 Office of Executive Minister (OFEM)'
+    : `🏢 ${(user as any)?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director (AD)')}`;
+
+  const roleColor = isOFEM ? '#c084fc' : '#fbbf24';
 
   return (
     <header className="navbar-container" style={{
@@ -132,37 +145,59 @@ export const Navbar: React.FC<NavbarProps> = ({
                 cursor: 'pointer', color: 'var(--text-primary)',
               }}
             >
+              {/* Avatar */}
               <img
                 src={getAvatarUrl(user)}
-                alt={user.name}
-                style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
-                onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'; }}
+                alt={`@${displayHandle}`}
+                style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0 }}
+                onError={(e: any) => {
+                  e.target.src = isOFEM
+                    ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+                    : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
+                }}
               />
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
-                  @{ (user.kingschatUserId || user.username || user.name || 'user').replace(/^@/, '') }
+              <div style={{ textAlign: 'left', minWidth: 0 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  @{displayHandle || 'user'}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: roleColor, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isOFEM ? 'OFEM' : 'AD Portal'}
                 </div>
               </div>
-              <ChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-muted)' }} />
+              <ChevronDown style={{ width: '14px', height: '14px', color: 'var(--text-muted)', flexShrink: 0 }} />
             </button>
 
             {showDropdown && (
               <div className="glass-panel animate-fade-in" style={{
-                position: 'absolute', top: '48px', right: 0,
-                width: '250px', padding: '14px', zIndex: 1000, background: '#111827',
-                border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '14px'
+                position: 'absolute', top: '52px', right: 0,
+                width: '270px', padding: '16px', zIndex: 1000, background: '#0d1117',
+                border: `1px solid ${roleColor}40`, borderRadius: '16px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
               }}>
-                <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
-                    @{ (user.kingschatUserId || user.username || user.name || 'user').replace(/^@/, '') }
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{user.email || 'user@ccpms.org'}</div>
-                  <div style={{
-                    marginTop: '8px', fontSize: '0.72rem', fontWeight: 700,
-                    color: isOFEM ? '#c084fc' : '#fbbf24',
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}>
-                    {isOFEM ? '👑 Office of Executive Minister (OFEM)' : `🏢 ${user.directorateRole || (user.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director')}`}
+                {/* Profile Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0 14px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '12px' }}>
+                  <img
+                    src={getAvatarUrl(user)}
+                    alt={`@${displayHandle}`}
+                    style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0 }}
+                    onError={(e: any) => {
+                      e.target.src = isOFEM
+                        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+                        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
+                    }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      @{displayHandle || 'user'}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: roleColor, fontWeight: 700, marginTop: '2px' }}>
+                      {roleLabel}
+                    </div>
+                    {user.email && (
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.email}
+                      </div>
+                    )}
                   </div>
                 </div>
 

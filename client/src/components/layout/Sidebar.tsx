@@ -80,19 +80,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
           Active Portal
         </div>
         <div style={{
-          padding: '10px 14px',
-          borderRadius: '10px',
+          padding: '12px 14px',
+          borderRadius: '12px',
           background: isOFEM ? 'rgba(99,102,241,0.12)' : 'rgba(245,158,11,0.10)',
           border: `1px solid ${isOFEM ? 'rgba(99,102,241,0.35)' : 'rgba(245,158,11,0.35)'}`,
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          <span style={{ fontSize: '1.1rem' }}>{isOFEM ? '👑' : '🏢'}</span>
-          <div>
-            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>
-              {isOFEM ? 'Office of Executive Minister (OFEM)' : (user?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'AD — Assistant Director Portal'))}
+          {/* Avatar */}
+          {(() => {
+            const handle = (user?.kingschatUserId || user?.username || '').replace(/^@/, '');
+            const avatarSrc = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('undefined'))
+              ? user.profilePhoto
+              : (handle && handle.length <= 25 && !handle.includes('/') && !handle.includes('=') && !handle.includes('+'))
+                ? `https://avatar.kingschat.net/${handle}`
+                : isOFEM
+                  ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+                  : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
+            const fallback = isOFEM
+              ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+              : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
+            return (
+              <img
+                src={avatarSrc}
+                alt={`@${handle}`}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${isOFEM ? 'rgba(99,102,241,0.6)' : 'rgba(245,158,11,0.6)'}`, flexShrink: 0 }}
+                onError={(e: any) => { e.target.src = fallback; }}
+              />
+            );
+          })()}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {isOFEM ? 'Office of Executive Minister (OFEM)' : ((user as any)?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'AD — Assistant Director'))}
             </div>
-            <div style={{ fontSize: '0.74rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 700 }}>
-              @{ (user?.kingschatUserId || user?.username || user?.name || 'user').replace(/^@/, '') }
+            <div style={{ fontSize: '0.72rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 700, marginTop: '2px' }}>
+              @{(user?.kingschatUserId || user?.username || 'user').replace(/^@/, '')}
             </div>
           </div>
         </div>
