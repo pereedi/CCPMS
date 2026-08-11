@@ -35,6 +35,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   },
   {
     kingschatUsername: 'pereedi',
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0'],
     name: 'pereedi',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -45,6 +46,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
     kingschatUsername: 'pereedi',
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0'],
     name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
@@ -156,11 +158,15 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
 
   // Step 4: Fallback for OAuth authenticated KingsChat users (uses THEIR OWN credentials)
   if (profile && (profile.id || profile.username)) {
-    const userHandle = profile.username || profile.id;
+    const rawId = profile.username || profile.id;
+    const isBase64 = rawId.length > 20 || rawId.includes('=');
+    const userHandle = isBase64 ? (profile.email ? profile.email.split('@')[0] : (profile.name ? profile.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'kc_user')) : rawId;
+
     logger.info(`[UserRoster] KingsChat OAuth profile authenticated for ${userHandle}`);
     return [
       {
         kingschatUsername: userHandle,
+        aliases: [rawId],
         name: userHandle,
         role: 'DIRECTOR',
         directorateCode: 'TECH_DIGITAL',

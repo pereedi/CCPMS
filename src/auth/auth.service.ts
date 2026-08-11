@@ -165,8 +165,7 @@ export class AuthService {
     }
 
     const matchedConfig = configs[0];
-    const isBase64Id = rawUsername.length > 20 || rawUsername.includes('=');
-    const username = matchedConfig?.kingschatUsername || (isBase64Id ? (kcProfile.name ? kcProfile.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : rawUsername) : rawUsername);
+    const username = matchedConfig?.kingschatUsername || (rawUsername.length > 20 || rawUsername.includes('=') ? (kcProfile.email ? kcProfile.email.split('@')[0] : 'user') : rawUsername);
 
     // UNIVERSAL PORTAL SELECTION: Prompt all authorized users to select OFEM or AD portal mode for session
     if (!requestedRole) {
@@ -181,9 +180,9 @@ export class AuthService {
 
       return {
         requiresRoleSelection: true,
-        username: (kcProfile.name && !kcProfile.name.startsWith('KingsChat User')) ? kcProfile.name : (matchedConfig?.name || username),
-        handle: isBase64Id ? (matchedConfig?.kingschatUsername || null) : username,
-        name: (kcProfile.name && !kcProfile.name.startsWith('KingsChat User')) ? kcProfile.name : (matchedConfig?.name || username),
+        username,
+        handle: username,
+        name: username,
         avatar_url: kcProfile.avatar_url,
         tokenOrCodePayload,
         availableRoles: [
@@ -280,7 +279,8 @@ export class AuthService {
       user: {
         id: userId,
         kingschatUserId: username,
-        name: user?.name || config?.name || kcProfile.name,
+        username: username,
+        name: username,
         email: user?.email || config?.email || kcProfile.email,
         phone: user?.phone || config?.phone || kcProfile.phone,
         profilePhoto: user?.profilePhoto || kcProfile.avatar_url,
