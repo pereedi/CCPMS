@@ -192,7 +192,7 @@ export const LoginScreen: React.FC = () => {
             <strong style={{ color: '#60a5fa', display: 'block', marginBottom: '2px' }}>
               Authorized Roster Enforcement Active
             </strong>
-            Login with KingsChat automatically verifies your registered handle (e.g. <code>lydia_OFEM</code> for OFEM, <code>johnson_AD</code> for Tech AD) and routes you to your authorized portal.
+            Login with KingsChat automatically verifies your registered handle 
           </div>
         </div>
 
