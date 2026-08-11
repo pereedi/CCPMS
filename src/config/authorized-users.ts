@@ -103,37 +103,55 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 
 /**
  * Finds all matching authorized user configurations for a KingsChat username, handle, or profile.
- * Supports base64 OAuth IDs and multi-role detection (e.g. users registered as both OFEM Executive and Assistant Director).
+ * Supports base64 OAuth IDs, email/name matching, and multi-role portal selection.
  */
 export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): AuthorizedUserConfig[] {
   if (!usernameOrId && !profile) return [];
 
   const rawInput = (usernameOrId || '').trim().toLowerCase().replace(/^@/, '');
-  const profUser = (profile?.username || profile?.id || '').trim().toLowerCase().replace(/^@/, '');
+  const profUser = (profile?.username || '').trim().toLowerCase().replace(/^@/, '');
+  const profId = (profile?.id || '').trim().toLowerCase();
   const profEmail = (profile?.email || '').trim().toLowerCase();
   const profName = (profile?.name || '').trim().toLowerCase();
 
-  return AUTHORIZED_USERS.filter((u) => {
+  // Step 1: Direct match on handle or aliases
+  let matches = AUTHORIZED_USERS.filter((u) => {
     const handle = u.kingschatUsername.trim().toLowerCase().replace(/^@/, '');
-    const email = (u.email || '').trim().toLowerCase();
-    const name = (u.name || '').trim().toLowerCase();
     const aliases = (u.aliases || []).map((a) => a.trim().toLowerCase().replace(/^@/, ''));
 
-    // 1. Direct match on handle or aliases
     if (rawInput && (handle === rawInput || aliases.includes(rawInput))) return true;
     if (profUser && (handle === profUser || aliases.includes(profUser))) return true;
-
-    // 2. Direct match on Email
-    if (profEmail && email && profEmail === email) return true;
-
-    // 3. Match on Name substring for raw base64 IDs
-    if (rawInput.length > 20 && profName && name && (profName.includes(name) || name.includes(profName))) return true;
-
-    // 4. Match base64 prefix
-    if (rawInput.length > 20 && aliases.some((a) => rawInput.startsWith(a) || a.startsWith(rawInput))) return true;
-
+    if (profId && (handle === profId || aliases.includes(profId))) return true;
     return false;
   });
+
+  if (matches.length > 0) return matches;
+
+  // Step 2: Match on Email
+  if (profEmail) {
+    matches = AUTHORIZED_USERS.filter((u) => u.email && u.email.trim().toLowerCase() === profEmail);
+    if (matches.length > 0) return matches;
+  }
+
+  // Step 3: Match on Name substring
+  if (profName) {
+    matches = AUTHORIZED_USERS.filter((u) => {
+      const uName = u.name.trim().toLowerCase();
+      const uHandle = u.kingschatUsername.trim().toLowerCase();
+      const nameParts = profName.split(/\s+/);
+      return nameParts.some((part: string) => part.length >= 3 && (uName.includes(part) || uHandle.includes(part))) ||
+             uName.includes(profName) || profName.includes(uName);
+    });
+    if (matches.length > 0) return matches;
+  }
+
+  // Step 4: Fallback for OAuth authenticated KingsChat users
+  if (profile && (profile.id || profile.username)) {
+    logger.info(`[UserRoster] KingsChat OAuth profile authenticated for ${profile.name || profile.username || profile.id}, providing portal authorization options.`);
+    return AUTHORIZED_USERS;
+  }
+
+  return [];
 }
 
 /**
