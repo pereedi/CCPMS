@@ -33,12 +33,15 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [selectedDirectorateName, setSelectedDirectorateName] = useState<string>('Technology & Digital Innovation');
 
   // Section 1: General Info, Calendar Dates & Specific Goals
+  const todayStr = new Date().toISOString().split('T')[0];
+  const firstDayOfMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
   const [title, setTitle] = useState('');
-  const [reportDate, setReportDate] = useState('2026-07-31');
-  const [startDate, setStartDate] = useState('2026-07-01');
-  const [endDate, setEndDate] = useState('2026-07-31');
-  const [period, setPeriod] = useState('2026-M07');
-  const [type, setType] = useState('MONTHLY');
+  const [reportDate, setReportDate] = useState(todayStr);
+  const [startDate, setStartDate] = useState(firstDayOfMonthStr);
+  const [endDate, setEndDate] = useState(todayStr);
+  const [period, setPeriod] = useState(todayStr.slice(0, 7));
+  const [type, setType] = useState('WEEKLY');
   const [specificGoals, setSpecificGoals] = useState('');
 
   // Section 2: Performance & Milestones
@@ -47,8 +50,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [challengesFaced, setChallengesFaced] = useState('');
 
   // Section 3: Financial Objectives
-  const [financialTarget, setFinancialTarget] = useState('150000');
-  const [financialAchievement, setFinancialAchievement] = useState('135000');
+  const [financialTarget, setFinancialTarget] = useState('');
+  const [financialAchievement, setFinancialAchievement] = useState('');
 
   // Section 4: Strategic Objectives (3 Pillars: People, Data, Money)
   const [peopleObjective, setPeopleObjective] = useState('');
@@ -56,8 +59,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [moneyObjective, setMoneyObjective] = useState('');
 
   // Section 5: Staffing
-  const [headcount, setHeadcount] = useState('12');
-  const [keyRoles, setKeyRoles] = useState('Software Engineers, Data Analysts, Cyber Security Officers');
+  const [headcount, setHeadcount] = useState('');
+  const [keyRoles, setKeyRoles] = useState('');
   const [staffingGaps, setStaffingGaps] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -179,23 +182,28 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       return;
     }
 
-    const fTarget = parseFloat(financialTarget);
-    const fAchieved = parseFloat(financialAchievement);
-
-    if (isNaN(fTarget) || fTarget < 0) {
-      setErrorMsg('⚠️ Financial Target must be a valid non-negative number.');
-      return;
+    if (financialTarget.trim()) {
+      const fTarget = parseFloat(financialTarget);
+      if (isNaN(fTarget) || fTarget < 0) {
+        setErrorMsg('⚠️ Financial Target must be a valid non-negative number.');
+        return;
+      }
     }
 
-    if (isNaN(fAchieved) || fAchieved < 0) {
-      setErrorMsg('⚠️ Financial Achievement must be a valid non-negative number.');
-      return;
+    if (financialAchievement.trim()) {
+      const fAchieved = parseFloat(financialAchievement);
+      if (isNaN(fAchieved) || fAchieved < 0) {
+        setErrorMsg('⚠️ Financial Achievement must be a valid non-negative number.');
+        return;
+      }
     }
 
-    const hCount = parseInt(headcount, 10);
-    if (isNaN(hCount) || hCount < 0) {
-      setErrorMsg('⚠️ Staff Headcount must be a valid non-negative number.');
-      return;
+    if (headcount.trim()) {
+      const hCount = parseInt(headcount, 10);
+      if (isNaN(hCount) || hCount < 0) {
+        setErrorMsg('⚠️ Staff Headcount must be a valid non-negative number.');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -210,21 +218,25 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       percentageAchievement,
       milestoneProgress,
       challengesFaced,
-      financialTarget,
-      financialAchievement,
+      financialTarget: financialTarget || '0',
+      financialAchievement: financialAchievement || '0',
       strategicObjectives: {
         people: peopleObjective,
         data: dataObjective,
         money: moneyObjective,
       },
       staffing: {
-        headcount,
+        headcount: headcount || '0',
         keyRoles,
         gaps: staffingGaps,
       },
     };
 
-    const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: ${parseFloat(financialAchievement).toLocaleString()} ESP of ${parseFloat(financialTarget).toLocaleString()} ESP Target. Headcount: ${headcount} Staff.`;
+    const targetVal = financialTarget.trim() ? parseFloat(financialTarget).toLocaleString() : '0';
+    const achievedVal = financialAchievement.trim() ? parseFloat(financialAchievement).toLocaleString() : '0';
+    const headcountVal = headcount.trim() ? headcount : 'N/A';
+
+    const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: ${achievedVal} ESP of ${targetVal} ESP Target. Headcount: ${headcountVal} Staff.`;
 
     try {
       let res: any;
@@ -422,12 +434,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                 Report Cycle
               </label>
               <select className="input-field" value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="DAILY">DAILY</option>
                 <option value="WEEKLY">WEEKLY</option>
-                <option value="BI-WEEKLY">BI-WEEKLY</option>
                 <option value="MONTHLY">MONTHLY</option>
-                <option value="QUARTERLY">QUARTERLY</option>
-                <option value="ANNUAL">ANNUAL</option>
               </select>
             </div>
           </div>
@@ -444,8 +452,8 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
             border: '1px solid var(--border-color)'
           }}>
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Calendar style={{ width: '14px', height: '14px' }} /> Exact Report Date *
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <Calendar style={{ width: '14px', height: '14px', color: '#ffffff' }} /> Exact Report Date *
               </label>
               <input
                 type="date"
@@ -660,6 +668,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
               <input
                 type="number"
                 className="input-field"
+                placeholder="e.g. 12"
                 value={headcount}
                 onChange={(e) => setHeadcount(e.target.value)}
               />

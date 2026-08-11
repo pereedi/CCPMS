@@ -3,7 +3,7 @@ import { api } from '../../services/api';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, FileText, CheckCircle2, Target, Eye, X } from 'lucide-react';
 
 export const PerformanceCalendar: React.FC = () => {
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 6, 31)); // July 2026
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedDayReports, setSelectedDayReports] = useState<{ dateStr: string; items: any[] } | null>(null);
@@ -160,7 +160,8 @@ export const PerformanceCalendar: React.FC = () => {
             }
 
             const dayReports = getReportsForDay(dayNum);
-            const isToday = dayNum === 31 && month === 6 && year === 2026;
+            const now = new Date();
+            const isToday = dayNum === now.getDate() && month === now.getMonth() && year === now.getFullYear();
 
             return (
               <div

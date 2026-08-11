@@ -198,6 +198,16 @@ body {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+input[type="date"] {
+  color-scheme: dark;
+  color: #ffffff;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
 /* Table Responsive Scrolling Container */
 .table-responsive-container {
   width: 100%;

@@ -93,22 +93,22 @@ export class AuthService {
     }
 
     // Direct mock token shortcuts
-    if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'pereedi') {
+    if (cleanToken === 'KC_SUPERADMIN' || cleanToken === 'alexdabest') {
       return {
-        id: 'pereedi',
+        id: 'alexdabest',
         name: 'Directorate (OFEM Executive)',
-        username: 'pereedi',
+        username: 'alexdabest',
         email: 'admin@ccpms.org',
         phone: '+2348000000001',
         avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       };
     }
 
-    if (cleanToken === 'KC_DIRECTOR' || cleanToken === 'alexdabest') {
+    if (cleanToken === 'KC_DIRECTOR' || cleanToken === 'pereedi') {
       return {
-        id: 'alexdabest',
+        id: 'pereedi',
         name: 'Technology & Digital Innovation Director',
-        username: 'alexdabest',
+        username: 'pereedi',
         email: 'director.tech@ccpms.org',
         phone: '+2348000000002',
         avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
