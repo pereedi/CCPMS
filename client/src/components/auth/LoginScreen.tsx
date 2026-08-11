@@ -29,11 +29,10 @@ export const LoginScreen: React.FC = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const clientId = import.meta.env.VITE_KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c';
+      const clientId = import.meta.env.VITE_KINGSCHAT_CLIENT_ID || 'd697c531-b03b-4370-a4b3-c26483c4f044';
       const redirectUri = window.location.origin + '/kingschat-callback';
-      const scopes = encodeURIComponent(JSON.stringify(['user_info']));
 
-      const oauthUrl = `https://accounts.kingsch.at/?client_id=${clientId}&scopes=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const oauthUrl = `https://accounts.kingschat.online/log-in?clientId=${clientId}&origin=${encodeURIComponent(redirectUri)}`;
 
       const width = 500;
       const height = 650;
@@ -57,6 +56,11 @@ export const LoginScreen: React.FC = () => {
           } finally {
             setLoading(false);
           }
+        } else if (event.data && event.data.type === 'KINGSCHAT_OAUTH_ERROR') {
+          window.removeEventListener('message', messageHandler);
+          if (popup && !popup.closed) popup.close();
+          setErrorMsg(event.data.message || 'Access Denied: Account not registered in authorized roster.');
+          setLoading(false);
         }
       };
 

@@ -25,7 +25,7 @@ export class AuthService {
         'https://connect.kingsch.at/developer/api/oauth2/token',
         {
           grant_type: 'code',
-          client_id: ENV.KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c',
+          client_id: ENV.KINGSCHAT_CLIENT_ID || 'd697c531-b03b-4370-a4b3-c26483c4f044',
           code,
         },
         {
@@ -159,8 +159,8 @@ export class AuthService {
     const config = getAuthorizedUserConfig(username) || getAuthorizedUserConfig(cleanInput);
 
     // ROSTER ENFORCEMENT: Reject users not registered in authorized roster
-    if (!config && !ENV.DEV_MOCK_KINGSCHAT && process.env.NODE_ENV === 'production') {
-      throw new Error(`Access Denied: KingsChat account @${username} is not registered in the CCPMS authorized roster.`);
+    if (!config) {
+      throw new Error(`Access Denied: KingsChat account @${username} is not registered as an authorized OFEM Executive or Assistant Director in CCPMS.`);
     }
 
     const effectiveRole = config ? config.role : (username === 'pereedi' || username === 'KC_SUPERADMIN' ? 'SUPER_ADMIN' : 'DIRECTOR');

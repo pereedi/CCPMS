@@ -10,9 +10,11 @@ import reportsRoutes from './reports/reports.routes';
 import dashboardRoutes from './dashboard/dashboard.routes';
 import notificationsRoutes from './notifications/notifications.routes';
 import auditRoutes from './audit/audit.routes';
+import { AuthController } from './auth/auth.controller';
 import { errorHandler } from './middleware/error.middleware';
 
 export const app = express();
+const authController = new AuthController();
 
 app.use(cors());
 app.use(express.json());
@@ -20,6 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve Frontend Static Assets
 app.use(express.static(path.join(__dirname, '../public')));
+
+// KingsChat Registered Callback Endpoint (POST https://ccpms.onrender.com/kingschat-callback)
+app.post('/kingschat-callback', (req, res) => authController.handleKingsChatCallback(req, res));
 
 // System Health Endpoint
 app.get('/health', (req, res) => {

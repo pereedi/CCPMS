@@ -11,6 +11,6 @@ export const ENV = {
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   KINGSCHAT_API_URL: process.env.KINGSCHAT_API_URL || 'https://connect.kingsch.at/api',
   KINGSCHAT_API_KEY: process.env.KINGSCHAT_API_KEY || '43cWL2OYutzOND0zGhiU94UficpXqSPkWEBtj+ENtIQ=',
-  KINGSCHAT_CLIENT_ID: process.env.KINGSCHAT_CLIENT_ID || 'b4dbce23-356f-41f5-aad9-96368e1e929c',
+  KINGSCHAT_CLIENT_ID: process.env.KINGSCHAT_CLIENT_ID || 'd697c531-b03b-4370-a4b3-c26483c4f044',
   DEV_MOCK_KINGSCHAT: process.env.DEV_MOCK_KINGSCHAT === 'true',
 };
