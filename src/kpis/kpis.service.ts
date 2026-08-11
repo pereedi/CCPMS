@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { calculateKpiScore, recalculateDirectorateKpiSummary } from './kpi-engine';
+import { calculateKpiScore, recalculateDirectorateKpiSummary, syncAllReportsToKPIs } from './kpi-engine';
 
 export class KPIService {
   async listCategories() {
@@ -18,6 +18,8 @@ export class KPIService {
   }
 
   async listKPIs(params: { directorateId?: string; categoryId?: string; search?: string }) {
+    await syncAllReportsToKPIs();
+
     const where: any = {};
     if (params.directorateId) where.directorateId = params.directorateId;
     if (params.categoryId) where.categoryId = params.categoryId;

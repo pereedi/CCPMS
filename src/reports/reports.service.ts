@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { recalculateDirectorateKpiSummary } from '../kpis/kpi-engine';
+import { recalculateDirectorateKpiSummary, syncReportMetricsToKPIs } from '../kpis/kpi-engine';
 
 export class ReportsService {
   async createReport(data: {
@@ -22,7 +22,7 @@ export class ReportsService {
     }
     if (!dirId) throw new Error('No directorate found to associate report');
 
-    return prisma.report.create({
+    const newReport = await prisma.report.create({
       data: {
         title: data.title,
         type: data.type || 'MONTHLY',
@@ -34,6 +34,9 @@ export class ReportsService {
         status: 'SUBMITTED',
       },
     });
+
+    await syncReportMetricsToKPIs(newReport.id);
+    return newReport;
   }
 
   async submitReport(reportId: string, authorId: string) {
@@ -229,9 +232,12 @@ export class ReportsService {
     if (data.dataJson) updateData.dataJson = data.dataJson;
     if (data.directorateId) updateData.directorateId = data.directorateId;
 
-    return prisma.report.update({
+    const updated = await prisma.report.update({
       where: { id },
       data: updateData,
     });
+
+    await syncReportMetricsToKPIs(updated.id);
+    return updated;
   }
 }
