@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
-import { getAuthorizedUserConfig, getAuthorizedUserConfigs } from '../config/authorized-users';
+import { getAuthorizedUserConfig, getAuthorizedUserConfigs, AuthorizedUserConfig } from '../config/authorized-users';
 
 export interface KingsChatProfile {
   id: string;
@@ -157,44 +157,50 @@ export class AuthService {
 
     const username = kcProfile.username || kcProfile.id;
     const requestedRole = typeof tokenOrCodePayload === 'object' ? tokenOrCodePayload.requestedRole : undefined;
-    const configs = getAuthorizedUserConfigs(username);
+    const configs = getAuthorizedUserConfigs(username, kcProfile);
 
     // ROSTER ENFORCEMENT: Reject users not registered in authorized roster
     if (configs.length === 0) {
       throw new Error(`Access Denied: KingsChat account @${username} is not registered as an authorized OFEM Executive or Assistant Director in CCPMS.`);
     }
 
-    // DUAL-ROLE ENFORCEMENT: If user is registered as both OFEM and AD, prompt for role selection if not already requested
-    if (configs.length > 1 && !requestedRole) {
+    // UNIVERSAL PORTAL SELECTION: Prompt all authorized users to select OFEM or AD portal mode for session
+    if (!requestedRole) {
       const directorates = await prisma.directorate.findMany({ select: { id: true, name: true, code: true } });
       const dirMap = new Map(directorates.map((d) => [d.code, d]));
 
+      const adConfig = configs.find((c) => c.role === 'DIRECTOR') || configs[0];
+      const assignedDirCode = adConfig?.directorateCode || 'TECH_DIGITAL';
+      const assignedDir = dirMap.get(assignedDirCode);
+      const adLabel = assignedDir ? `Assistant Director — ${assignedDir.name}` : 'Assistant Director (AD Portal)';
+      const adDesc = assignedDir ? `Directorate Level: ${assignedDir.name} Reporting` : 'Directorate Level Operations & Reporting';
+
       return {
         requiresRoleSelection: true,
-        username,
+        username: kcProfile.name || username,
+        handle: username,
         name: kcProfile.name || configs[0].name,
         avatar_url: kcProfile.avatar_url,
         tokenOrCodePayload,
-        availableRoles: configs.map((c) => {
-          const dirInfo = c.directorateCode ? dirMap.get(c.directorateCode) : null;
-          return {
-            role: c.role,
-            directorateCode: c.directorateCode || null,
-            directorateName: dirInfo?.name || c.name,
-            portalLabel: c.role === 'SUPER_ADMIN'
-              ? 'Office of Executive Minister (OFEM)'
-              : `Assistant Director — ${dirInfo?.name || c.name}`,
-            description: c.role === 'SUPER_ADMIN'
-              ? 'Executive Level: Controls, Approvals & All 7 Directorates'
-              : `Directorate Level: ${dirInfo?.name || c.name} Reporting`,
-          };
-        }),
+        availableRoles: [
+          {
+            role: 'SUPER_ADMIN',
+            portalLabel: 'Office of Executive Minister (OFEM)',
+            description: 'Executive Level: Controls, Approvals & All 7 Directorates',
+          },
+          {
+            role: 'DIRECTOR',
+            directorateCode: assignedDirCode,
+            portalLabel: adLabel,
+            description: adDesc,
+          },
+        ],
       };
     }
 
-    const config = getAuthorizedUserConfig(username, requestedRole) || configs[0];
-    const effectiveRole = config ? config.role : (username === 'pereedi' || username === 'KC_SUPERADMIN' ? 'SUPER_ADMIN' : 'DIRECTOR');
-    const effectiveDirCode = config?.directorateCode || (effectiveRole === 'DIRECTOR' ? 'TECH_DIGITAL' : undefined);
+    const config = getAuthorizedUserConfig(username, requestedRole, kcProfile) || configs[0];
+    const effectiveRole = requestedRole || config?.role || 'SUPER_ADMIN';
+    const effectiveDirCode = effectiveRole === 'DIRECTOR' ? (config?.directorateCode || 'TECH_DIGITAL') : undefined;
     const isOFEM = effectiveRole === 'SUPER_ADMIN';
 
     // Resolve Role and Directorate from Prisma DB

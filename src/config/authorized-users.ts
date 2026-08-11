@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 
 export interface AuthorizedUserConfig {
   kingschatUsername: string; // KingsChat username or handle (e.g. "alex_director", "dr_peremobowei")
+  aliases?: string[]; // Additional handles or base64 OAuth IDs (e.g. "pereedi", "dlNha2xlZ0...")
   name: string;
   role: 'SUPER_ADMIN' | 'DIRECTOR';
   directorateCode?: string; // TECH_DIGITAL, FINTECH, SOCIAL_MEDIA, CITIZEN_GLOBAL, RESEARCH_DATA, CONTENT_MEDIA, DIGITAL_ASSETS
@@ -18,6 +19,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
   {
     kingschatUsername: 'pereedi3161',
+    aliases: ['pereedi', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
     name: 'Directorate (OFEM Executive)',
     role: 'SUPER_ADMIN',
     email: 'admin@ccpms.org',
@@ -32,17 +34,20 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
-    kingschatUsername: 'pereedi',
+    kingschatUsername: 'pereedi3161',
+    aliases: ['pereedi', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
     name: 'Technology & Digital Innovation Director',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
     email: 'director.tech@ccpms.org',
   },
   {
-    kingschatUsername: 'pereedi3161',
-    name: 'Directorate (OFEM Executive)',
-    role: 'SUPER_ADMIN',
-    email: 'admin@ccpms.org',
+    kingschatUsername: 'pereedi',
+    aliases: ['pereedi3161', 'dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0'],
+    name: 'Technology & Digital Innovation Director',
+    role: 'DIRECTOR',
+    directorateCode: 'TECH_DIGITAL',
+    email: 'director.tech@ccpms.org',
   },
   {
     kingschatUsername: 'alexdabest',
@@ -97,22 +102,45 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 ];
 
 /**
- * Finds all matching authorized user configurations for a KingsChat username / handle.
- * Used for dual-role detection (e.g. users registered as both OFEM Executive and Assistant Director).
+ * Finds all matching authorized user configurations for a KingsChat username, handle, or profile.
+ * Supports base64 OAuth IDs and multi-role detection (e.g. users registered as both OFEM Executive and Assistant Director).
  */
-export function getAuthorizedUserConfigs(username: string): AuthorizedUserConfig[] {
-  if (!username) return [];
-  const clean = username.trim().toLowerCase().replace(/^@/, '');
-  return AUTHORIZED_USERS.filter(
-    (u) => u.kingschatUsername.trim().toLowerCase().replace(/^@/, '') === clean
-  );
+export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): AuthorizedUserConfig[] {
+  if (!usernameOrId && !profile) return [];
+
+  const rawInput = (usernameOrId || '').trim().toLowerCase().replace(/^@/, '');
+  const profUser = (profile?.username || profile?.id || '').trim().toLowerCase().replace(/^@/, '');
+  const profEmail = (profile?.email || '').trim().toLowerCase();
+  const profName = (profile?.name || '').trim().toLowerCase();
+
+  return AUTHORIZED_USERS.filter((u) => {
+    const handle = u.kingschatUsername.trim().toLowerCase().replace(/^@/, '');
+    const email = (u.email || '').trim().toLowerCase();
+    const name = (u.name || '').trim().toLowerCase();
+    const aliases = (u.aliases || []).map((a) => a.trim().toLowerCase().replace(/^@/, ''));
+
+    // 1. Direct match on handle or aliases
+    if (rawInput && (handle === rawInput || aliases.includes(rawInput))) return true;
+    if (profUser && (handle === profUser || aliases.includes(profUser))) return true;
+
+    // 2. Direct match on Email
+    if (profEmail && email && profEmail === email) return true;
+
+    // 3. Match on Name substring for raw base64 IDs
+    if (rawInput.length > 20 && profName && name && (profName.includes(name) || name.includes(profName))) return true;
+
+    // 4. Match base64 prefix
+    if (rawInput.length > 20 && aliases.some((a) => rawInput.startsWith(a) || a.startsWith(rawInput))) return true;
+
+    return false;
+  });
 }
 
 /**
  * Finds an authorized user configuration by KingsChat username / handle and optional requestedRole
  */
-export function getAuthorizedUserConfig(username: string, requestedRole?: string): AuthorizedUserConfig | undefined {
-  const configs = getAuthorizedUserConfigs(username);
+export function getAuthorizedUserConfig(username: string, requestedRole?: string, profile?: any): AuthorizedUserConfig | undefined {
+  const configs = getAuthorizedUserConfigs(username, profile);
   if (configs.length === 0) return undefined;
   if (requestedRole) {
     const found = configs.find((c) => c.role === requestedRole);
