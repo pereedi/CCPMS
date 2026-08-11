@@ -18,10 +18,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isOFEM = currentRole === 'OFEM';
 
-  const getDisplayHandle = (user: any) => {
-    const handle = user?.username || user?.kingschatUserId;
-    if (!handle || handle.length > 20 || handle.includes('=')) return null;
-    return `@${handle.replace(/^@/, '')}`;
+  const getAvatarUrl = (user: any) => {
+    if (user?.profilePhoto && !user.profilePhoto.includes('avatar.kingschat.net')) {
+      return user.profilePhoto;
+    }
+    const handle = user?.kingschatUserId || user?.username;
+    if (!handle || handle.length > 20 || handle.includes('/') || handle.includes('=')) {
+      return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+    }
+    return `https://avatar.kingschat.net/${handle.replace(/^@/, '')}`;
   };
 
   return (
@@ -128,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
             >
               <img
-                src={user.profilePhoto || `https://avatar.kingschat.net/${user.kingschatUserId}`}
+                src={getAvatarUrl(user)}
                 alt={user.name}
                 style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
                 onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'; }}

@@ -35,7 +35,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   },
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0'],
     name: 'pereedi',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -46,7 +46,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0'],
     name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
