@@ -58,23 +58,23 @@ export class AuthService {
       });
 
       const profileData = response.data;
-      const profile = profileData.profile || profileData.user || profileData.data || profileData;
+      const profile = profileData.profile || profileData;
 
-      const rawId = profile.id || profile.user_id || '';
+      const id = profile.id || '';
       const rawUser = profile.username ? profile.username.replace(/^@/, '') : '';
       const cleanUser = (rawUser && rawUser.length <= 25 && !rawUser.includes('='))
         ? rawUser
-        : (rawId && rawId.length <= 25 && !rawId.includes('=') ? rawId : '');
+        : (id && id.length <= 25 && !id.includes('=') ? id : '');
 
-      const realName = profile.name || profile.display_name || profile.full_name || profile.user_name || cleanUser || 'KingsChat User';
-      const realAvatar = profile.avatar_url || profile.avatar || profile.picture || profile.profile_picture || profile.photo_url || profile.avatarUrl || null;
+      const realName = profile.name || cleanUser || 'KingsChat User';
+      const realAvatar = profile.avatar || profile.avatar_url || null;
 
-      logger.info(`[AuthService] KingsChat API profile fetched for @${cleanUser || rawId}: name="${realName}", avatar=${realAvatar ? 'YES' : 'NO'}`);
+      logger.info(`[AuthService] KingsChat Profile Fetched: id="${id}", username="${cleanUser || profile.username}", name="${realName}", avatar=${realAvatar ? 'YES' : 'NO'}`);
 
       return {
-        id: rawId || cleanUser,
+        id: id || cleanUser,
         name: realName,
-        username: cleanUser || rawId,
+        username: cleanUser || profile.username || id,
         email: profile.email || null,
         phone: profile.phone_number || profile.phone || null,
         avatar_url: realAvatar,
