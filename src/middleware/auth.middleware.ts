@@ -102,11 +102,12 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       : (config?.directorateRole
           || (user?.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director'));
 
-    // ── 4. Resolve display handle (priority: DB > roster > JWT clean) ─────────
-    const dbHandle      = sanitizeHandle(user?.kingschatUserId);
-    const resolvedHandle = dbHandle ?? config?.kingschatUsername ?? cleanHandle ?? 'unknown';
+    // ── 4. Resolve display handle (priority: DB > roster > JWT clean > role default) ─────────
+    const dbHandle = sanitizeHandle(user?.kingschatUserId);
+    const roleDefaultHandle = isOFEM ? 'pereedi3161' : 'pereedi';
+    const resolvedHandle = dbHandle ?? config?.kingschatUsername ?? cleanHandle ?? roleDefaultHandle;
 
-    // ── 5. Resolve display name (priority: DB > roster name > roster handle) ──
+    // ── 5. Resolve display name (priority: DB > roster name > roster handle > handle) ─────────
     const dbName = (user?.name && user.name.length <= 60 && !user.name.includes('='))
       ? user.name
       : null;

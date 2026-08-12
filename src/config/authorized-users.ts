@@ -20,7 +20,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
   {
     kingschatUsername: 'pereedi3161',
-    aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
+    aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy', 'U3lJSytYZmJoU3JIWWE1N2lac0hJZUY0aENUR0hXKyttVFZBV2ROekhwaz0'],
     name: 'pereedi3161',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -35,7 +35,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   },
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0', 'U3lJSytYZmJoU3JIWWE1N2lac0hJZUY0aENUR0hXKyttVFZBV2ROekhwaz0'],
     name: 'pereedi',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -46,7 +46,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0', 'U3lJSytYZmJoU3JIWWE1N2lac0hJZUY0aENUR0hXKyttVFZBV2ROekhwaz0'],
     name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
@@ -144,33 +144,19 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
     if (matches.length > 0) return matches;
   }
 
-  // Step 3: Match on exact Name
-  if (profName && !profName.includes('=')) {
-    matches = AUTHORIZED_USERS.filter((u) => u.name.trim().toLowerCase() === profName || u.kingschatUsername.trim().toLowerCase() === profName);
+
+  // Step 3: Match on display name or handle substring
+  if (profName && !profName.includes('=') && profName.length <= 40) {
+    matches = AUTHORIZED_USERS.filter((u) =>
+      u.name.trim().toLowerCase() === profName ||
+      u.kingschatUsername.trim().toLowerCase() === profName ||
+      profName.startsWith(u.kingschatUsername.trim().toLowerCase()) ||
+      u.kingschatUsername.trim().toLowerCase().startsWith(profName)
+    );
     if (matches.length > 0) return matches;
   }
 
-  // Step 4: Fallback for OAuth authenticated KingsChat users (uses THEIR OWN credentials)
-  if (profile && (profile.id || profile.username)) {
-    const rawId = profile.username || profile.id;
-    const isBase64 = rawId.length > 20 || rawId.includes('=') || rawId.includes('+');
-    const userHandle = isBase64
-      ? (profile.email ? profile.email.split('@')[0] : (profile.name && !profile.name.includes('=') ? profile.name.toLowerCase().replace(/[^a-z0-9_]/g, '') : 'kc_user'))
-      : rawId.replace(/^@/, '');
-
-    logger.info(`[UserRoster] KingsChat OAuth profile authenticated for ${userHandle}`);
-    return [
-      {
-        kingschatUsername: userHandle,
-        aliases: [rawId],
-        name: profile.name && !profile.name.includes('=') ? profile.name : userHandle,
-        role: 'DIRECTOR',
-        directorateCode: 'TECH_DIGITAL',
-        email: profile.email || `${userHandle.toLowerCase()}@ccpms.org`,
-      },
-    ];
-  }
-
+  // No match found — caller must handle (throw Access Denied)
   return [];
 }
 

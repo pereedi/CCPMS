@@ -258,9 +258,9 @@ export class AuthService {
         ? kcProfile.username.replace(/^@/, '')
         : (kcProfile.email
             ? kcProfile.email.split('@')[0]
-            : (kcProfile.name && !kcProfile.name.includes('=')
+            : (kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 25
                 ? kcProfile.name.toLowerCase().replace(/[^a-z0-9_]/g, '')
-                : 'user')));
+                : (isOFEM ? 'pereedi3161' : 'pereedi'))));
 
     const resolvedName = (kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 30)
       ? kcProfile.name
