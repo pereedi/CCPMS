@@ -39,8 +39,8 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
     }
 
     const rawKcId = decoded?.kingschatUserId || decoded?.userId;
-    const config = getAuthorizedUserConfig(rawKcId);
-    const cleanHandle = config?.kingschatUsername || (rawKcId && rawKcId.length <= 20 && !rawKcId.includes('=') ? rawKcId : 'pereedi');
+    const config = getAuthorizedUserConfig(rawKcId, decoded?.role);
+    const cleanHandle = config?.kingschatUsername || (rawKcId && rawKcId.length <= 25 && !rawKcId.includes('=') && !rawKcId.includes('+') ? rawKcId.replace(/^@/, '') : 'user');
 
     let user: any = null;
     if (decoded?.userId) {
