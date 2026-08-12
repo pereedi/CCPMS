@@ -112,7 +112,7 @@ export class ReportsService {
         dataJson: data.dataJson || null,
         directorateId,
         authorId,
-        status: 'SUBMITTED',
+        status: 'DRAFT',
       },
     });
 
@@ -123,7 +123,14 @@ export class ReportsService {
   async submitReport(reportId: string, authorId: string) {
     const report = await prisma.report.findUnique({ where: { id: reportId } });
     if (!report) throw new Error('Report not found');
-    if (report.authorId !== authorId && report.status !== 'DRAFT') {
+
+    // Always resolve to the real DB user UUID before comparing
+    const resolvedAuthorId = await this.resolveUserId(authorId);
+
+    if (report.status !== 'DRAFT') {
+      throw new Error(`Report cannot be submitted in status: ${report.status}`);
+    }
+    if (report.authorId !== resolvedAuthorId) {
       throw new Error('Only the author can submit a draft report');
     }
 

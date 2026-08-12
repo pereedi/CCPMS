@@ -3,15 +3,23 @@ import { AuthRequest } from './auth.middleware';
 import { prisma } from '../config/database';
 import { logger } from '../utils/logger';
 
+/** Returns the userId only if it looks like a real UUID (from DB). Synthetic IDs like "user-pereedi" are excluded. */
+function realUserId(id?: string): string | null {
+  if (!id) return null;
+  // Real Prisma UUIDs are 36 chars with 4 dashes: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return id;
+  return null;
+}
+
 export function auditLogMiddleware(action: string, resource: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    // Intercept response finish to write audit log
     res.on('finish', async () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         try {
           await prisma.auditLog.create({
             data: {
-              userId: req.user?.id || null,
+              // Only attach userId if it's a real DB UUID — avoids FK constraint violations
+              userId: realUserId(req.user?.id),
               action,
               resource,
               details: JSON.stringify({
@@ -31,3 +39,4 @@ export function auditLogMiddleware(action: string, resource: string) {
     next();
   };
 }
+

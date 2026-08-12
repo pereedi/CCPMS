@@ -77,19 +77,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const setDirectSession = async (accessToken: string, authUser?: User) => {
+  const setDirectSession = async (accessToken: string, _authUser?: User) => {
+    // Always store token first
     localStorage.setItem('ccpms_access_token', accessToken);
-    if (authUser) {
-      setUser(authUser);
-    } else {
-      try {
-        const res: any = await api.get('/auth/me');
-        if (res.success && res.data) {
-          setUser(res.data);
-        }
-      } catch (err) {
-        console.error('Failed to load user profile after OAuth session:', err);
+    // Always fetch the definitive clean profile from /auth/me using the stored token.
+    // We intentionally ignore the `_authUser` passed from postMessage — it may be
+    // partial, missing, or contain the raw OAuth code instead of a clean user object.
+    try {
+      const res: any = await api.get('/auth/me');
+      if (res.success && res.data) {
+        setUser(res.data);
+      } else {
+        localStorage.removeItem('ccpms_access_token');
       }
+    } catch (err) {
+      console.error('Failed to load user profile after OAuth session:', err);
+      localStorage.removeItem('ccpms_access_token');
     }
   };
 
