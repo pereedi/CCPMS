@@ -84,18 +84,22 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       ? 'OFEM Executive Minister'
       : (config?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director'));
 
-    const resolvedName = (user?.name && !user.name.includes('=') && user.name.length <= 30)
+    const resolvedHandle = (user?.kingschatUserId && user.kingschatUserId.toLowerCase() !== 'user' && !user.kingschatUserId.includes('=') && !user.kingschatUserId.includes('+'))
+      ? user.kingschatUserId
+      : (config?.kingschatUsername || cleanHandle);
+
+    const resolvedName = (user?.name && user.name.toLowerCase() !== 'user' && !user.name.includes('=') && user.name.length <= 30)
       ? user.name
-      : (config?.name || cleanHandle);
+      : (config?.name || config?.kingschatUsername || resolvedHandle);
 
     let photo = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('unsplash.com'))
       ? user.profilePhoto
       : null;
 
     req.user = {
-      id: user?.id || `user-${cleanHandle}`,
-      kingschatUserId: user?.kingschatUserId || cleanHandle,
-      username: user?.kingschatUserId || cleanHandle,
+      id: user?.id || `user-${resolvedHandle}`,
+      kingschatUserId: resolvedHandle,
+      username: resolvedHandle,
       name: resolvedName,
       email: user?.email || config?.email || `${cleanHandle}@ccpms.org`,
       profilePhoto: photo,
