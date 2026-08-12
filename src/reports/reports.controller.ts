@@ -52,6 +52,25 @@ export class ReportsController {
         assignedDirId = req.user?.directorateId || (req.user?.directorate as any)?.id || directorateId;
       }
 
+      // Resolve the real DB user ID from kingschatUserId if needed
+      let authorId = req.user!.id;
+      if (authorId && authorId.startsWith('user-')) {
+        const { prisma } = await import('../config/database');
+        const kcHandle = req.user!.kingschatUserId;
+        const dbUser = await prisma.user.findFirst({
+          where: { OR: [{ kingschatUserId: kcHandle }, { name: kcHandle }] },
+        });
+        if (dbUser) {
+          authorId = dbUser.id;
+          if (!assignedDirId) assignedDirId = dbUser.directorateId || undefined;
+        } else {
+          // Fall back to first user in the relevant directorate
+          const { prisma: db } = await import('../config/database');
+          const fallbackUser = await db.user.findFirst({ where: { status: 'ACTIVE' } });
+          if (fallbackUser) authorId = fallbackUser.id;
+        }
+      }
+
       const created = await reportsService.createReport({
         title,
         type,
@@ -59,7 +78,7 @@ export class ReportsController {
         summary,
         dataJson,
         directorateId: assignedDirId,
-        authorId: req.user!.id,
+        authorId,
       });
       return sendSuccess(res, created, 'Draft report created successfully', 201);
     } catch (error: any) {

@@ -95,8 +95,23 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       role: userRole,
       directorateRole: dirRoleTitle,
       permissions: isOFEM
-        ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT', 'reports:read', 'reports:create']
-        : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS', 'reports:read', 'reports:create'],
+        ? [
+            // SUPER_ADMIN: full system access
+            'VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT',
+            'reports:read', 'reports:create', 'reports:review', 'reports:approve',
+            'kpis:read', 'kpis:manage', 'kpis:update_result',
+            'projects:read', 'projects:manage',
+            'directorates:read', 'users:read', 'users:manage',
+            'audit:read', 'dashboard:read', 'notifications:read',
+          ]
+        : [
+            // DIRECTOR: directorate-scoped access
+            'SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS',
+            'reports:read', 'reports:create',
+            'kpis:read', 'kpis:update_result',
+            'projects:read', 'projects:manage',
+            'directorates:read', 'dashboard:read', 'notifications:read',
+          ],
       directorate: isOFEM ? null : (user?.directorate ? { id: user.directorate.id, name: user.directorate.name, code: user.directorate.code } : null),
       directorateId: isOFEM ? null : (user?.directorateId || null),
     } as any;

@@ -288,8 +288,21 @@ export class AuthService {
         role: userRole,
         directorateRole: isOFEM ? 'OFEM Executive Minister' : (config?.directorateRole || (userDir?.name ? `${userDir.name} Director` : 'Assistant Director')),
         permissions: isOFEM
-          ? ['VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT']
-          : ['SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS'],
+          ? [
+              'VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT',
+              'reports:read', 'reports:create', 'reports:review', 'reports:approve',
+              'kpis:read', 'kpis:manage', 'kpis:update_result',
+              'projects:read', 'projects:manage',
+              'directorates:read', 'users:read', 'users:manage',
+              'audit:read', 'dashboard:read', 'notifications:read',
+            ]
+          : [
+              'SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS',
+              'reports:read', 'reports:create',
+              'kpis:read', 'kpis:update_result',
+              'projects:read', 'projects:manage',
+              'directorates:read', 'dashboard:read', 'notifications:read',
+            ],
         directorate: userDir,
         department: null,
         lastLogin: new Date().toISOString(),
