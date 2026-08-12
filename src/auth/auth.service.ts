@@ -211,11 +211,14 @@ export class AuthService {
       const adLabel = assignedDir ? `Assistant Director — ${assignedDir.name}` : 'Assistant Director (AD Portal)';
       const adDesc  = assignedDir ? `Directorate Level: ${assignedDir.name} Reporting` : 'Directorate Level Operations & Reporting';
 
+      const cleanPromptHandle = matchedConfig?.kingschatUsername || (username && username.length <= 25 && !username.includes('=') ? username : 'user');
+      const cleanPromptName = (kcProfile.name && !kcProfile.name.includes('=')) ? kcProfile.name : (matchedConfig?.name || cleanPromptHandle);
+
       return {
         requiresRoleSelection: true,
-        username,
-        handle: username,
-        name: username,
+        username: cleanPromptHandle,
+        handle: cleanPromptHandle,
+        name: cleanPromptName,
         avatar_url: kcProfile.avatar_url,
         tokenOrCodePayload,
         availableRoles: [
@@ -250,8 +253,16 @@ export class AuthService {
       dbDir = await prisma.directorate.findUnique({ where: { code: effectiveDirCode } });
     }
 
-    const cleanHandle = matchedConfig?.kingschatUsername || (username && username.length <= 25 && !username.includes('=') ? username : (kcProfile.username && kcProfile.username.length <= 25 ? kcProfile.username : 'pereedi3161'));
-    const resolvedName = kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 30
+    const cleanHandle = matchedConfig?.kingschatUsername ||
+      (kcProfile.username && kcProfile.username.length <= 25 && !kcProfile.username.includes('=') && !kcProfile.username.includes('+')
+        ? kcProfile.username.replace(/^@/, '')
+        : (kcProfile.email
+            ? kcProfile.email.split('@')[0]
+            : (kcProfile.name && !kcProfile.name.includes('=')
+                ? kcProfile.name.toLowerCase().replace(/[^a-z0-9_]/g, '')
+                : 'user')));
+
+    const resolvedName = (kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 30)
       ? kcProfile.name
       : (matchedConfig?.name || matchedConfig?.kingschatUsername || cleanHandle);
 
