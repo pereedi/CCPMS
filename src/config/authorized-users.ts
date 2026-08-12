@@ -155,12 +155,17 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
 
   // Step 4: Base64 OAuth ID Fallback for KingsChat authenticated users
   // Resolves using the authenticating user's own KingsChat profile (username, name, email)
-  if (profile && (profile.username || profile.name || profile.email || profile.id)) {
+
+    console.log('[DEBUG] KingsChat Profile Username:', profile.username);
+    console.log('[DEBUG] Full KingsChat Profile Payload:', JSON.stringify(profile));
+
     const cleanUser = (profile.username && !profile.username.includes('=') && profile.username.length <= 30)
       ? profile.username.replace(/^@/, '')
       : (profile.email ? profile.email.split('@')[0] : (profile.name && !profile.name.includes('=') ? profile.name.toLowerCase().replace(/[^a-z0-9_]/g, '') : 'kc_user'));
 
     const realName = (profile.name && !profile.name.includes('=')) ? profile.name : cleanUser;
+
+    logger.info(`[UserRoster] Resolved clean username: "${cleanUser}", realName: "${realName}" from profile.username="${profile.username}"`);
 
     return [
       {
@@ -171,7 +176,7 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
         email: profile.email || `${cleanUser.toLowerCase()}@ccpms.org`,
       },
     ];
-  }
+  
 
   // No match found — caller must handle (throw Access Denied)
   return [];
