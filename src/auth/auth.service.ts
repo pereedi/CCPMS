@@ -57,14 +57,27 @@ export class AuthService {
         },
       });
 
-      const profile = response.data.profile || response.data;
+      const profileData = response.data;
+      const profile = profileData.profile || profileData.user || profileData.data || profileData;
+
+      const rawId = profile.id || profile.user_id || '';
+      const rawUser = profile.username ? profile.username.replace(/^@/, '') : '';
+      const cleanUser = (rawUser && rawUser.length <= 25 && !rawUser.includes('='))
+        ? rawUser
+        : (rawId && rawId.length <= 25 && !rawId.includes('=') ? rawId : '');
+
+      const realName = profile.name || profile.display_name || profile.full_name || profile.user_name || cleanUser || 'KingsChat User';
+      const realAvatar = profile.avatar_url || profile.avatar || profile.picture || profile.profile_picture || profile.photo_url || profile.avatarUrl || null;
+
+      logger.info(`[AuthService] KingsChat API profile fetched for @${cleanUser || rawId}: name="${realName}", avatar=${realAvatar ? 'YES' : 'NO'}`);
+
       return {
-        id: profile.id,
-        name: profile.name,
-        username: profile.username ? profile.username.replace(/^@/, '') : profile.id,
-        email: profile.email,
-        phone: profile.phone_number || profile.phone,
-        avatar_url: profile.avatar,
+        id: rawId || cleanUser,
+        name: realName,
+        username: cleanUser || rawId,
+        email: profile.email || null,
+        phone: profile.phone_number || profile.phone || null,
+        avatar_url: realAvatar,
       };
     } catch (error: any) {
       logger.error(`[AuthService] KingsChat Profile Fetch Error: ${error.response?.data?.message || error.message}`);
@@ -86,9 +99,7 @@ export class AuthService {
         username: config.kingschatUsername,
         email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
         phone: config.phone || '+2348000000000',
-        avatar_url: config.role === 'SUPER_ADMIN'
-          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-          : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        avatar_url: `https://avatar.kingschat.net/${config.kingschatUsername}`,
       };
     }
 
@@ -100,7 +111,7 @@ export class AuthService {
         username: 'pereedi3161',
         email: 'admin@ccpms.org',
         phone: '+2348000000001',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        avatar_url: 'https://avatar.kingschat.net/pereedi3161',
       };
     }
 
@@ -111,7 +122,7 @@ export class AuthService {
         username: 'pereedi',
         email: 'director.tech@ccpms.org',
         phone: '+2348000000002',
-        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        avatar_url: 'https://avatar.kingschat.net/pereedi',
       };
     }
 
@@ -239,28 +250,36 @@ export class AuthService {
       dbDir = await prisma.directorate.findUnique({ where: { code: effectiveDirCode } });
     }
 
-    const resolvedName = config?.kingschatUsername || username;
+    const cleanHandle = matchedConfig?.kingschatUsername || (username && username.length <= 25 && !username.includes('=') ? username : (kcProfile.username && kcProfile.username.length <= 25 ? kcProfile.username : 'pereedi3161'));
+    const resolvedName = kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 30
+      ? kcProfile.name
+      : (matchedConfig?.name || matchedConfig?.kingschatUsername || cleanHandle);
+
+    let photoUrl = kcProfile.avatar_url;
+    if (!photoUrl || photoUrl.includes('unsplash.com')) {
+      photoUrl = `https://avatar.kingschat.net/${cleanHandle}`;
+    }
 
     // Upsert User in database with bound Role and Directorate
     let user: any = null;
     try {
       user = await prisma.user.upsert({
-        where: { kingschatUserId: username },
+        where: { kingschatUserId: cleanHandle },
         update: {
           name: resolvedName,
-          email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
+          email: kcProfile.email || config?.email || `${cleanHandle.toLowerCase()}@ccpms.org`,
           phone: kcProfile.phone || config?.phone || '+2348000000000',
-          profilePhoto: kcProfile.avatar_url,
+          profilePhoto: photoUrl,
           roleId: dbRole?.id,
           directorateId: isOFEM ? null : (dbDir?.id || null),
           lastLogin: new Date(),
         },
         create: {
-          kingschatUserId: username,
+          kingschatUserId: cleanHandle,
           name: resolvedName,
-          email: kcProfile.email || config?.email || `${username.toLowerCase()}@ccpms.org`,
+          email: kcProfile.email || config?.email || `${cleanHandle.toLowerCase()}@ccpms.org`,
           phone: kcProfile.phone || config?.phone || '+2348000000000',
-          profilePhoto: kcProfile.avatar_url,
+          profilePhoto: photoUrl,
           roleId: dbRole?.id!,
           directorateId: isOFEM ? null : (dbDir?.id || null),
           status: 'ACTIVE',
@@ -275,7 +294,7 @@ export class AuthService {
       logger.warn(`[AuthService] DB Upsert fallback: ${err.message}`);
     }
 
-    const userId = user?.id || `user-${username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const userId = user?.id || `user-${cleanHandle.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
     const userRole = user?.role?.name || effectiveRole;
     const userDir = isOFEM
       ? null
@@ -285,7 +304,7 @@ export class AuthService {
 
     const jwtPayload = {
       userId,
-      kingschatUserId: username,
+      kingschatUserId: cleanHandle,
       role: userRole,
       directorateId: userDir?.id,
     };
@@ -293,19 +312,19 @@ export class AuthService {
     const accessToken  = jwt.sign(jwtPayload, ENV.JWT_SECRET, { expiresIn: ENV.JWT_EXPIRES_IN as any });
     const refreshToken = jwt.sign(jwtPayload, ENV.JWT_REFRESH_SECRET, { expiresIn: ENV.JWT_REFRESH_EXPIRES_IN as any });
 
-    logger.info(`[AuthService] KingsChat login successful for: @${username} (${userRole}) Directorate: ${userDir?.name || 'OFEM Global'}`);
+    logger.info(`[AuthService] KingsChat login successful for: @${cleanHandle} (${userRole}) Directorate: ${userDir?.name || 'OFEM Global'}`);
 
     return {
       accessToken,
       refreshToken,
       user: {
         id: userId,
-        kingschatUserId: username,
-        username: username,
-        name: username,
+        kingschatUserId: cleanHandle,
+        username: cleanHandle,
+        name: user?.name || resolvedName,
         email: user?.email || config?.email || kcProfile.email,
         phone: user?.phone || config?.phone || kcProfile.phone,
-        profilePhoto: user?.profilePhoto || kcProfile.avatar_url,
+        profilePhoto: user?.profilePhoto || photoUrl,
         status: 'ACTIVE',
         role: userRole,
         directorateRole: isOFEM ? 'OFEM Executive Minister' : (config?.directorateRole || (userDir?.name ? `${userDir.name} Director` : 'Assistant Director')),

@@ -88,21 +88,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }}>
           {/* Avatar */}
           {(() => {
-            const handle = (user?.kingschatUserId || user?.username || '').replace(/^@/, '');
-            const avatarSrc = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('undefined'))
+            const rawHandle = (user?.kingschatUserId || user?.username || '').replace(/^@/, '');
+            const cleanHandle = (rawHandle.length > 25 || rawHandle.includes('='))
+              ? (user?.name || 'user')
+              : rawHandle;
+
+            const avatarSrc = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('unsplash.com') && !user.profilePhoto.includes('undefined'))
               ? user.profilePhoto
-              : (handle && handle.length <= 25 && !handle.includes('/') && !handle.includes('=') && !handle.includes('+'))
-                ? `https://avatar.kingschat.net/${handle}`
-                : isOFEM
-                  ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-                  : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
-            const fallback = isOFEM
-              ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-              : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
+              : (cleanHandle && cleanHandle.length <= 25 && !cleanHandle.includes('/') && !cleanHandle.includes('=') && !cleanHandle.includes('+'))
+                ? `https://avatar.kingschat.net/${cleanHandle}`
+                : `https://avatar.kingschat.net/user`;
+
+            const fallback = `https://avatar.kingschat.net/${cleanHandle}`;
             return (
               <img
                 src={avatarSrc}
-                alt={`@${handle}`}
+                alt={`@${cleanHandle}`}
                 style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${isOFEM ? 'rgba(99,102,241,0.6)' : 'rgba(245,158,11,0.6)'}`, flexShrink: 0 }}
                 onError={(e: any) => { e.target.src = fallback; }}
               />
@@ -113,7 +114,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {isOFEM ? 'Office of Executive Minister (OFEM)' : ((user as any)?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'AD — Assistant Director'))}
             </div>
             <div style={{ fontSize: '0.72rem', color: isOFEM ? '#c084fc' : '#fbbf24', fontWeight: 700, marginTop: '2px' }}>
-              @{(user?.kingschatUserId || user?.username || 'user').replace(/^@/, '')}
+              @{(() => {
+                const rawHandle = (user?.kingschatUserId || user?.username || 'user').replace(/^@/, '');
+                return (rawHandle.length > 25 || rawHandle.includes('=')) ? (user?.name || 'user') : rawHandle;
+              })()}
             </div>
           </div>
         </div>

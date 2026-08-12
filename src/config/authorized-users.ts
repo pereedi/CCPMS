@@ -20,7 +20,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
   {
     kingschatUsername: 'pereedi3161',
-    aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy'],
+    aliases: ['dlNha2xlZ0t0N1EyOExzNFhIbE1VOEl0NmU1NHA1RStmRWsxbmNzbVZlOD0', 'ODlBMmxSMmR5OTcy', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0'],
     name: 'pereedi3161',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -35,7 +35,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   },
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0'],
     name: 'pereedi',
     role: 'SUPER_ADMIN',
     directorateRole: 'OFEM Executive Minister',
@@ -46,7 +46,7 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
   {
     kingschatUsername: 'pereedi',
-    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0'],
+    aliases: ['WmpIN0pWWHBXZDYxRVFoSlIzMVlnMkFXREtPTWJwMkZnQU53RlQxaXJHaz0', 'MXZQblJZcnVSVk1udkwvWXI1VGRIL0JzUVVTSEFPNlB3SU1LOTNLbXNrTT0', 'k2o2s3c1wgp0t0pwew0yuuvvb2picezosezqywt6aenietbqsxrhy0nhqt0'],
     name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
@@ -167,7 +167,7 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
       {
         kingschatUsername: userHandle,
         aliases: [rawId],
-        name: userHandle,
+        name: profile.name || userHandle,
         role: 'DIRECTOR',
         directorateCode: 'TECH_DIGITAL',
         email: profile.email || `${userHandle.toLowerCase()}@ccpms.org`,

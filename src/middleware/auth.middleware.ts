@@ -84,13 +84,24 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       ? 'OFEM Executive Minister'
       : (config?.directorateRole || (user?.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director'));
 
+    const resolvedName = (user?.name && !user.name.includes('=') && user.name.length <= 30)
+      ? user.name
+      : (config?.name || cleanHandle);
+
+    let photo = user?.profilePhoto;
+    if (!photo || photo.includes('unsplash.com')) {
+      photo = (cleanHandle && cleanHandle.length <= 25 && !cleanHandle.includes('='))
+        ? `https://avatar.kingschat.net/${cleanHandle}`
+        : null;
+    }
+
     req.user = {
       id: user?.id || `user-${cleanHandle}`,
-      kingschatUserId: cleanHandle,
-      username: cleanHandle,
-      name: cleanHandle,
+      kingschatUserId: user?.kingschatUserId || cleanHandle,
+      username: user?.kingschatUserId || cleanHandle,
+      name: resolvedName,
       email: user?.email || config?.email || `${cleanHandle}@ccpms.org`,
-      profilePhoto: user?.profilePhoto || (isOFEM ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'),
+      profilePhoto: photo,
       status: 'ACTIVE',
       role: userRole,
       directorateRole: dirRoleTitle,
