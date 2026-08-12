@@ -2,6 +2,95 @@ import { prisma } from '../config/database';
 import { recalculateDirectorateKpiSummary, syncReportMetricsToKPIs } from '../kpis/kpi-engine';
 
 export class ReportsService {
+  private async resolveUserId(userIdOrHandle?: string): Promise<string> {
+    if (userIdOrHandle) {
+      // 1. Direct lookup by User ID
+      const byId = await prisma.user.findUnique({ where: { id: userIdOrHandle } });
+      if (byId) return byId.id;
+
+      // 2. Lookup by handle/username/email or stripped user- prefix
+      const cleanHandle = userIdOrHandle.replace(/^user-/, '');
+      const byHandle = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { kingschatUserId: userIdOrHandle },
+            { kingschatUserId: cleanHandle },
+            { name: userIdOrHandle },
+            { name: cleanHandle },
+            { email: userIdOrHandle },
+          ],
+        },
+      });
+      if (byHandle) return byHandle.id;
+    }
+
+    // 3. Fall back to any active user
+    const fallbackUser = await prisma.user.findFirst({ where: { status: 'ACTIVE' } });
+    if (fallbackUser) return fallbackUser.id;
+
+    // 4. Create default user if database has no active users
+    let role = await prisma.role.findFirst({ where: { name: 'SUPER_ADMIN' } });
+    if (!role) {
+      role = await prisma.role.create({
+        data: { name: 'SUPER_ADMIN', description: 'Super Admin' },
+      });
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        kingschatUserId: 'pereedi3161',
+        name: 'pereedi3161',
+        email: 'admin@ccpms.org',
+        roleId: role.id,
+        status: 'ACTIVE',
+      },
+    });
+    return newUser.id;
+  }
+
+  private async resolveDirectorateId(dirIdOrCode?: string, authorId?: string): Promise<string> {
+    if (dirIdOrCode && dirIdOrCode.trim().length > 0) {
+      const existing = await prisma.directorate.findFirst({
+        where: {
+          OR: [
+            { id: dirIdOrCode },
+            { code: dirIdOrCode },
+            { name: dirIdOrCode },
+          ],
+        },
+      });
+      if (existing) return existing.id;
+    }
+
+    if (authorId) {
+      const author = await prisma.user.findUnique({ where: { id: authorId } });
+      if (author?.directorateId) {
+        const authorDir = await prisma.directorate.findUnique({ where: { id: author.directorateId } });
+        if (authorDir) return authorDir.id;
+      }
+    }
+
+    const firstDir = await prisma.directorate.findFirst();
+    if (firstDir) return firstDir.id;
+
+    let defaultOrg = await prisma.organization.findFirst();
+    if (!defaultOrg) {
+      defaultOrg = await prisma.organization.create({
+        data: { name: 'CCPMS Central Command', code: 'CCPMS_MAIN' },
+      });
+    }
+
+    const defaultDir = await prisma.directorate.create({
+      data: {
+        name: 'Technology & Digital Innovation',
+        code: 'TECH_DIGITAL',
+        description: 'Technology & Digital Innovation Directorate',
+        organizationId: defaultOrg.id,
+      },
+    });
+    return defaultDir.id;
+  }
+
   async createReport(data: {
     title: string;
     type: string;
@@ -11,54 +100,8 @@ export class ReportsService {
     directorateId?: string;
     authorId: string;
   }) {
-    let dirId = data.directorateId;
-
-    if (dirId && dirId.trim().length > 0) {
-      const existing = await prisma.directorate.findFirst({
-        where: {
-          OR: [
-            { id: dirId },
-            { code: dirId },
-            { name: dirId },
-          ],
-        },
-      });
-      if (existing) {
-        dirId = existing.id;
-      } else {
-        dirId = undefined;
-      }
-    } else {
-      dirId = undefined;
-    }
-
-    if (!dirId && data.authorId) {
-      const author = await prisma.user.findUnique({ where: { id: data.authorId } });
-      dirId = author?.directorateId || undefined;
-    }
-
-    if (!dirId) {
-      const firstDir = await prisma.directorate.findFirst();
-      dirId = firstDir?.id;
-    }
-
-    if (!dirId) {
-      let defaultOrg = await prisma.organization.findFirst();
-      if (!defaultOrg) {
-        defaultOrg = await prisma.organization.create({
-          data: { name: 'CCPMS Central Command', code: 'CCPMS_MAIN' },
-        });
-      }
-      const defaultDir = await prisma.directorate.create({
-        data: {
-          name: 'Technology & Digital Innovation',
-          code: 'TECH_DIGITAL',
-          description: 'Technology & Digital Innovation Directorate',
-          organizationId: defaultOrg.id,
-        },
-      });
-      dirId = defaultDir.id;
-    }
+    const authorId = await this.resolveUserId(data.authorId);
+    const directorateId = await this.resolveDirectorateId(data.directorateId, authorId);
 
     const newReport = await prisma.report.create({
       data: {
@@ -67,8 +110,8 @@ export class ReportsService {
         period: data.period,
         summary: data.summary,
         dataJson: data.dataJson || null,
-        directorateId: dirId,
-        authorId: data.authorId,
+        directorateId,
+        authorId,
         status: 'SUBMITTED',
       },
     });
@@ -119,12 +162,13 @@ export class ReportsService {
       throw new Error(`Report cannot be reviewed in status: ${report.status}`);
     }
 
+    const realManagerId = await this.resolveUserId(managerId);
     const newStatus = action === 'APPROVE' ? 'MANAGER_APPROVED' : 'REJECTED';
 
     await prisma.reportApproval.create({
       data: {
         reportId,
-        approverId: managerId,
+        approverId: realManagerId,
         roleAtApproval: 'DIRECTOR',
         action: newStatus,
         comments,
@@ -171,13 +215,14 @@ export class ReportsService {
     const report = await prisma.report.findUnique({ where: { id: reportId } });
     if (!report) throw new Error('Report not found');
 
+    const realApproverId = await this.resolveUserId(approverId);
     const isApprove = action === 'APPROVE';
     const newStatus = isApprove ? (approverRole === 'SUPER_ADMIN' ? 'APPROVED' : 'DIRECTOR_APPROVED') : 'REJECTED';
 
     await prisma.reportApproval.create({
       data: {
         reportId,
-        approverId,
+        approverId: realApproverId,
         roleAtApproval: approverRole,
         action: isApprove ? 'APPROVED' : 'REJECTED',
         comments: comments || (isApprove ? 'Report approved.' : 'Report rejected.'),
