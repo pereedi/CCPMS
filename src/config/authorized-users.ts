@@ -42,14 +42,14 @@ export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
 
 
   // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
-  {
+ /* {
     kingschatUsername: 'pereedi',
     name: 'pereedi',
     role: 'DIRECTOR',
     directorateCode: 'TECH_DIGITAL',
     directorateRole: 'Technology & Digital Innovation Director',
     email: 'director.tech@ccpms.org',
-  },
+  },*/
   {
     kingschatUsername: 'alexdabest',
     name: 'alexdabest',
@@ -154,19 +154,23 @@ export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): A
   }
 
   // Step 4: Base64 OAuth ID Fallback for KingsChat authenticated users
-  // KingsChat OAuth generates dynamic base64 IDs (e.g. "WVEyRldCSWVrMkNC...", "U3lJS...", "dlNha...").
-  // If the input or profile ID is a base64 string (>15 chars or contains '=' / '+'):
-  const isBase64 = (s: string) => !!s && (s.length > 15 || s.includes('=') || s.includes('+'));
-  if (isBase64(rawInput) || isBase64(profId) || isBase64(profUser)) {
-    const searchStr = `${profUser} ${profName} ${profEmail}`.toLowerCase();
-    for (const u of AUTHORIZED_USERS) {
-      const h = u.kingschatUsername.toLowerCase();
-      if (searchStr.includes(h)) {
-        return AUTHORIZED_USERS.filter((item) => item.kingschatUsername.toLowerCase() === h);
-      }
-    }
-    // Default for KingsChat OAuth logins: Return dual-role entries (OFEM + AD) for user selection
-    return AUTHORIZED_USERS.filter((u) => u.kingschatUsername === 'pereedi3161' || u.kingschatUsername === 'pereedi');
+  // Resolves using the authenticating user's own KingsChat profile (username, name, email)
+  if (profile && (profile.username || profile.name || profile.email || profile.id)) {
+    const cleanUser = (profile.username && !profile.username.includes('=') && profile.username.length <= 30)
+      ? profile.username.replace(/^@/, '')
+      : (profile.email ? profile.email.split('@')[0] : (profile.name && !profile.name.includes('=') ? profile.name.toLowerCase().replace(/[^a-z0-9_]/g, '') : 'kc_user'));
+
+    const realName = (profile.name && !profile.name.includes('=')) ? profile.name : cleanUser;
+
+    return [
+      {
+        kingschatUsername: cleanUser,
+        name: realName,
+        role: 'DIRECTOR',
+        directorateCode: 'TECH_DIGITAL',
+        email: profile.email || `${cleanUser.toLowerCase()}@ccpms.org`,
+      },
+    ];
   }
 
   // No match found — caller must handle (throw Access Denied)

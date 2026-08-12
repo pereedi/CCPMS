@@ -260,7 +260,7 @@ export class AuthService {
             ? kcProfile.email.split('@')[0]
             : (kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 25
                 ? kcProfile.name.toLowerCase().replace(/[^a-z0-9_]/g, '')
-                : (isOFEM ? 'pereedi3161' : 'pereedi'))));
+                : 'kc_user')));
 
     const resolvedName = (kcProfile.name && !kcProfile.name.includes('=') && kcProfile.name.length <= 30)
       ? kcProfile.name
