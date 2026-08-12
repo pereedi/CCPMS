@@ -136,7 +136,7 @@ export class AuthService {
    * Synchronize user profile in local DB and issue local JWT.
    * Supports both OAuth code exchange and raw token/roster handle authentication.
    */
-  async authenticateWithKingsChat(tokenOrCodePayload: any) {
+  async authenticateWithKingsChat(tokenOrCodePayload: any): Promise<any> {
     let cleanInput = typeof tokenOrCodePayload === 'string' ? tokenOrCodePayload.trim() : (tokenOrCodePayload?.code || tokenOrCodePayload?.token || '');
     if (!cleanInput) cleanInput = 'pereedi';
 
@@ -167,8 +167,30 @@ export class AuthService {
     const matchedConfig = configs[0];
     const username = matchedConfig?.kingschatUsername || (rawUsername.length > 20 || rawUsername.includes('=') ? (kcProfile.email ? kcProfile.email.split('@')[0] : 'user') : rawUsername);
 
-    // UNIVERSAL PORTAL SELECTION: Prompt all authorized users to select OFEM or AD portal mode for session
+    // PORTAL SELECTION: Only offer roles the user is actually registered for in the roster.
     if (!requestedRole) {
+      const hasOFEM = configs.some((c) => c.role === 'SUPER_ADMIN');
+      const hasAD   = configs.some((c) => c.role === 'DIRECTOR');
+
+      // ── AD-ONLY: skip modal entirely, auto-route to AD ──────────────────────
+      if (hasAD && !hasOFEM) {
+        const adConfig = configs.find((c) => c.role === 'DIRECTOR') || configs[0];
+        // Re-invoke with DIRECTOR role pre-selected so session is created immediately
+        return this.authenticateWithKingsChat({
+          ...(typeof tokenOrCodePayload === 'object' ? tokenOrCodePayload : { token: tokenOrCodePayload }),
+          requestedRole: 'DIRECTOR',
+        });
+      }
+
+      // ── OFEM-ONLY: skip modal, auto-route to OFEM ───────────────────────────
+      if (hasOFEM && !hasAD) {
+        return this.authenticateWithKingsChat({
+          ...(typeof tokenOrCodePayload === 'object' ? tokenOrCodePayload : { token: tokenOrCodePayload }),
+          requestedRole: 'SUPER_ADMIN',
+        });
+      }
+
+      // ── DUAL (both AD + OFEM): show portal selection modal ──────────────────
       const directorates = await prisma.directorate.findMany({ select: { id: true, name: true, code: true } });
       const dirMap = new Map(directorates.map((d) => [d.code, d]));
 
@@ -176,7 +198,7 @@ export class AuthService {
       const assignedDirCode = adConfig?.directorateCode || 'TECH_DIGITAL';
       const assignedDir = dirMap.get(assignedDirCode);
       const adLabel = assignedDir ? `Assistant Director — ${assignedDir.name}` : 'Assistant Director (AD Portal)';
-      const adDesc = assignedDir ? `Directorate Level: ${assignedDir.name} Reporting` : 'Directorate Level Operations & Reporting';
+      const adDesc  = assignedDir ? `Directorate Level: ${assignedDir.name} Reporting` : 'Directorate Level Operations & Reporting';
 
       return {
         requiresRoleSelection: true,

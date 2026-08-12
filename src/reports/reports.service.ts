@@ -12,15 +12,53 @@ export class ReportsService {
     authorId: string;
   }) {
     let dirId = data.directorateId;
-    if (!dirId) {
+
+    if (dirId && dirId.trim().length > 0) {
+      const existing = await prisma.directorate.findFirst({
+        where: {
+          OR: [
+            { id: dirId },
+            { code: dirId },
+            { name: dirId },
+          ],
+        },
+      });
+      if (existing) {
+        dirId = existing.id;
+      } else {
+        dirId = undefined;
+      }
+    } else {
+      dirId = undefined;
+    }
+
+    if (!dirId && data.authorId) {
       const author = await prisma.user.findUnique({ where: { id: data.authorId } });
       dirId = author?.directorateId || undefined;
     }
+
     if (!dirId) {
       const firstDir = await prisma.directorate.findFirst();
       dirId = firstDir?.id;
     }
-    if (!dirId) throw new Error('No directorate found to associate report');
+
+    if (!dirId) {
+      let defaultOrg = await prisma.organization.findFirst();
+      if (!defaultOrg) {
+        defaultOrg = await prisma.organization.create({
+          data: { name: 'CCPMS Central Command', code: 'CCPMS_MAIN' },
+        });
+      }
+      const defaultDir = await prisma.directorate.create({
+        data: {
+          name: 'Technology & Digital Innovation',
+          code: 'TECH_DIGITAL',
+          description: 'Technology & Digital Innovation Directorate',
+          organizationId: defaultOrg.id,
+        },
+      });
+      dirId = defaultDir.id;
+    }
 
     const newReport = await prisma.report.create({
       data: {
