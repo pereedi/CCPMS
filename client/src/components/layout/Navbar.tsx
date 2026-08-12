@@ -24,16 +24,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     ? (user?.name || 'User')
     : rawHandle.replace(/^@/, '');
 
-  /** Get avatar: prefer real profilePhoto from KC OAuth, filter out unsplash stock photos */
+  /** SVG Data URL fallback avatar to prevent any external DNS ERR_NAME_NOT_RESOLVED or infinite onError loops */
+  const fallbackAvatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%2360a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
+  /** Get avatar: prefer real profilePhoto from KC OAuth, otherwise use robust inline SVG fallback */
   const getAvatarUrl = (u: any) => {
     if (u?.profilePhoto && u.profilePhoto.startsWith('http') && !u.profilePhoto.includes('unsplash.com') && !u.profilePhoto.includes('undefined')) {
       return u.profilePhoto;
     }
-    const handle = u?.kingschatUserId || u?.username;
-    if (handle && handle.length <= 25 && !handle.includes('/') && !handle.includes('=') && !handle.includes('+')) {
-      return `https://avatar.kingschat.net/${handle.replace(/^@/, '')}`;
-    }
-    return `https://avatar.kingschat.net/user`;
+    return fallbackAvatar;
   };
 
   /** Get role label — OFEM or directorate title */
@@ -152,7 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 alt={`@${displayHandle}`}
                 style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0 }}
                 onError={(e: any) => {
-                  e.target.src = `https://avatar.kingschat.net/${(user?.kingschatUserId || 'user').replace(/^@/, '')}`;
+                  e.target.onerror = null;
+                  e.target.src = fallbackAvatar;
                 }}
               />
               <div style={{ textAlign: 'left', minWidth: 0 }}>
@@ -180,7 +180,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     alt={`@${displayHandle}`}
                     style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0 }}
                     onError={(e: any) => {
-                      e.target.src = `https://avatar.kingschat.net/${(user?.kingschatUserId || 'user').replace(/^@/, '')}`;
+                      e.target.onerror = null;
+                      e.target.src = fallbackAvatar;
                     }}
                   />
                   <div style={{ minWidth: 0 }}>

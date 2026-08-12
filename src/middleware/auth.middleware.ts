@@ -88,12 +88,9 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
       ? user.name
       : (config?.name || cleanHandle);
 
-    let photo = user?.profilePhoto;
-    if (!photo || photo.includes('unsplash.com')) {
-      photo = (cleanHandle && cleanHandle.length <= 25 && !cleanHandle.includes('='))
-        ? `https://avatar.kingschat.net/${cleanHandle}`
-        : null;
-    }
+    let photo = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('unsplash.com'))
+      ? user.profilePhoto
+      : null;
 
     req.user = {
       id: user?.id || `user-${cleanHandle}`,

@@ -11,7 +11,7 @@ export interface KingsChatProfile {
   username?: string;
   email?: string;
   phone?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }
 
 export class AuthService {
@@ -99,7 +99,7 @@ export class AuthService {
         username: config.kingschatUsername,
         email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
         phone: config.phone || '+2348000000000',
-        avatar_url: `https://avatar.kingschat.net/${config.kingschatUsername}`,
+        avatar_url: null,
       };
     }
 
@@ -111,7 +111,7 @@ export class AuthService {
         username: 'pereedi3161',
         email: 'admin@ccpms.org',
         phone: '+2348000000001',
-        avatar_url: 'https://avatar.kingschat.net/pereedi3161',
+        avatar_url: null,
       };
     }
 
@@ -122,7 +122,7 @@ export class AuthService {
         username: 'pereedi',
         email: 'director.tech@ccpms.org',
         phone: '+2348000000002',
-        avatar_url: 'https://avatar.kingschat.net/pereedi',
+        avatar_url: null,
       };
     }
 
@@ -138,7 +138,7 @@ export class AuthService {
         username: mockId,
         email: cleanToken.includes('@') ? cleanToken : `${mockId.toLowerCase()}@kingschat.net`,
         phone: '+2348000000000',
-        avatar_url: `https://avatar.kingschat.net/${mockId}`,
+        avatar_url: null,
       };
     }
   }
@@ -255,10 +255,9 @@ export class AuthService {
       ? kcProfile.name
       : (matchedConfig?.name || matchedConfig?.kingschatUsername || cleanHandle);
 
-    let photoUrl = kcProfile.avatar_url;
-    if (!photoUrl || photoUrl.includes('unsplash.com')) {
-      photoUrl = `https://avatar.kingschat.net/${cleanHandle}`;
-    }
+    let photoUrl = (kcProfile.avatar_url && kcProfile.avatar_url.startsWith('http') && !kcProfile.avatar_url.includes('unsplash.com'))
+      ? kcProfile.avatar_url
+      : null;
 
     // Upsert User in database with bound Role and Directorate
     let user: any = null;

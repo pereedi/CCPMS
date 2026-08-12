@@ -93,19 +93,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ? (user?.name || 'user')
               : rawHandle;
 
+            const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="%2360a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
             const avatarSrc = (user?.profilePhoto && user.profilePhoto.startsWith('http') && !user.profilePhoto.includes('unsplash.com') && !user.profilePhoto.includes('undefined'))
               ? user.profilePhoto
-              : (cleanHandle && cleanHandle.length <= 25 && !cleanHandle.includes('/') && !cleanHandle.includes('=') && !cleanHandle.includes('+'))
-                ? `https://avatar.kingschat.net/${cleanHandle}`
-                : `https://avatar.kingschat.net/user`;
+              : fallbackSvg;
 
-            const fallback = `https://avatar.kingschat.net/${cleanHandle}`;
             return (
               <img
                 src={avatarSrc}
                 alt={`@${cleanHandle}`}
                 style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${isOFEM ? 'rgba(99,102,241,0.6)' : 'rgba(245,158,11,0.6)'}`, flexShrink: 0 }}
-                onError={(e: any) => { e.target.src = fallback; }}
+                onError={(e: any) => {
+                  e.target.onerror = null;
+                  e.target.src = fallbackSvg;
+                }}
               />
             );
           })()}
