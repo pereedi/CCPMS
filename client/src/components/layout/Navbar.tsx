@@ -20,9 +20,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   /** Get the clean @handle to display — falls back to display name if handle is a raw token hash */
   const rawHandle = user?.kingschatUserId || user?.username || '';
-  const isInvalidHandle = !rawHandle || rawHandle === 'unknown' || rawHandle === 'user' || rawHandle.length > 25 || rawHandle.includes('=') || rawHandle.includes('+');
-  const displayHandle = isInvalidHandle
-    ? (user?.name && user.name !== 'unknown' && user.name !== 'User' ? user.name : (isOFEM ? 'pereedi3161' : 'pereedi'))
+  const displayHandle = (rawHandle.length > 25 || rawHandle.includes('='))
+    ? (user?.name || 'User')
     : rawHandle.replace(/^@/, '');
 
   /** SVG Data URL fallback avatar to prevent any external DNS ERR_NAME_NOT_RESOLVED or infinite onError loops */
