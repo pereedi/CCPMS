@@ -64,9 +64,9 @@ export const OverviewTab: React.FC = () => {
   const directorateMap: Record<string, { code: string; count: number; avgAchievement: number; financialTarget: number; financialAchievement: number }> = {};
   
   records.forEach(r => {
-    const code = r.directorateName || r.username || 'TECH_DIGITAL';
+    const code = r.directorateName || r.username || 'Technology & Digital Innovation';
     if (!directorateMap[code]) {
-      directorateMap[code] = { code: code.slice(0, 12), count: 0, avgAchievement: 0, financialTarget: 0, financialAchievement: 0 };
+      directorateMap[code] = { code, count: 0, avgAchievement: 0, financialTarget: 0, financialAchievement: 0 };
     }
     directorateMap[code].count += 1;
     directorateMap[code].avgAchievement += (parseFloat(r.percentageAchievement || '90') || 90);
@@ -81,9 +81,9 @@ export const OverviewTab: React.FC = () => {
 
   // Default fallback chart data if no submissions yet
   const displayChartData = chartData.length > 0 ? chartData : [
-    { code: 'TECH_DIGITAL', avgAchievement: 95, financialTarget: 150000, financialAchievement: 140000 },
-    { code: 'FINTECH', avgAchievement: 88, financialTarget: 120000, financialAchievement: 110000 },
-    { code: 'SOCIAL_MEDIA', avgAchievement: 92, financialTarget: 90000, financialAchievement: 85000 },
+    { code: 'Technology & Digital Innovation', avgAchievement: 95, financialTarget: 150000, financialAchievement: 140000 },
+    { code: 'FinTech & Technology Products', avgAchievement: 88, financialTarget: 120000, financialAchievement: 110000 },
+    { code: 'Social Media & Platforms', avgAchievement: 92, financialTarget: 90000, financialAchievement: 85000 },
   ];
 
   return (

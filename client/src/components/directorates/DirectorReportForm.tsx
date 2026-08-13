@@ -77,10 +77,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   // Active Projects (No stand-in hardcoded title — starts empty with clean placeholders)
   const [projects, setProjects] = useState<ProjectFormItem[]>([]);
 
-  // File Upload State (R2 Object Storage)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
-
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -107,7 +103,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       setTitle(editReportData.title || editReportData.summary?.slice(0, 60) || '');
       setType(editReportData.type || 'WEEKLY');
       setPeriod(editReportData.period || todayStr.slice(0, 7));
-      if (editReportData.file_url) setExistingFileUrl(editReportData.file_url);
 
       if (editReportData.specificGoals) setSpecificGoals(editReportData.specificGoals);
       else if (editReportData.summary) setSpecificGoals(editReportData.summary);
@@ -212,7 +207,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         gaps: staffingGaps,
       },
       projects,
-      file_url: existingFileUrl,
     };
 
     try {
@@ -230,19 +224,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       }
 
       if (res.success) {
-        // Handle file upload if a new file is attached
-        if (selectedFile && recordId) {
-          try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            await api.post(`/upload/records/${recordId}`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-          } catch (uploadErr: any) {
-            console.warn('File upload failed:', uploadErr.message);
-          }
-        }
-
         const actionText = editReportData ? 'updated and resubmitted' : 'submitted';
         setSuccessMsg(`Report "${title}" ${actionText} successfully! Reflecting live on OFEM Executive Command Center.`);
 
@@ -257,7 +238,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           setKeyRoles('');
           setStaffingGaps('');
           setProjects([]);
-          setSelectedFile(null);
         }
 
         if (onReportSubmitted) {
