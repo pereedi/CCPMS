@@ -43,6 +43,25 @@ export class RecordsService {
       console.warn('[AuditLog] Failed to log SUBMIT_REPORT:', e.message);
     }
 
+    // Send Real-Time Notification to OFEM Executives
+    try {
+      const ofemUsers = ['pereedi', 'pst_joy'];
+      for (const ofemUser of ofemUsers) {
+        await (prisma as any).notification.create({
+          data: {
+            username:  ofemUser,
+            title:     `📄 New Report Submitted`,
+            message:   `AD @${username} submitted the ${payload.type} report for ${payload.title || payload.period}.`,
+            type:      'REPORT_SUBMISSION',
+            read:      false,
+            link:      `/reports`,
+          },
+        });
+      }
+    } catch (e: any) {
+      console.warn('[Notification] Failed to notify OFEM of new report:', e.message);
+    }
+
     return this.parse(newRecord);
   }
 
@@ -95,6 +114,30 @@ export class RecordsService {
       });
     } catch (e: any) {
       console.warn('[AuditLog] Failed to log record update:', e.message);
+    }
+
+    // Send Real-Time Notification to OFEM if updated by AD
+    if (callerRole === 'AD') {
+      try {
+        const ofemUsers = ['pereedi', 'pst_joy'];
+        const titleText = currentPayload.status === 'RETURNED'
+          ? `📝 Report Corrected & Resubmitted`
+          : `📝 Directorate Report Updated`;
+        for (const ofemUser of ofemUsers) {
+          await (prisma as any).notification.create({
+            data: {
+              username:  ofemUser,
+              title:     titleText,
+              message:   `AD @${callerUsername} updated the report for ${updatedPayload.title || updatedPayload.period}.`,
+              type:      'REPORT_UPDATE',
+              read:      false,
+              link:      `/reports`,
+            },
+          });
+        }
+      } catch (e: any) {
+        console.warn('[Notification] Failed to notify OFEM of report update:', e.message);
+      }
     }
 
     return this.parse(updatedRow);
