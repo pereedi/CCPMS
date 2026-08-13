@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { Send, FileSpreadsheet, Target, TrendingUp, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2, Briefcase, Plus, Trash2, FolderKanban } from 'lucide-react';
+import { Send, FileSpreadsheet, Target, TrendingUp, Users, Database, AlertCircle, CheckCircle2, Calendar, Building2, Briefcase, Plus, Trash2, Upload, FileText } from 'lucide-react';
 import { EspIcon } from '../common/EspIcon';
 
 interface ProjectFormItem {
@@ -43,7 +43,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [selectedDirectorateId, setSelectedDirectorateId] = useState<string>('');
   const [selectedDirectorateName, setSelectedDirectorateName] = useState<string>('Technology & Digital Innovation');
 
-  // Section 1: General Info, Calendar Dates & Specific Goals
+  // Dates & Core Info
   const todayStr = new Date().toISOString().split('T')[0];
   const firstDayOfMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
@@ -55,36 +55,31 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
   const [type, setType] = useState('WEEKLY');
   const [specificGoals, setSpecificGoals] = useState('');
 
-  // Section 2: Performance & Milestones
+  // Performance & Milestones
   const [percentageAchievement, setPercentageAchievement] = useState('90');
   const [milestoneProgress, setMilestoneProgress] = useState('');
   const [challengesFaced, setChallengesFaced] = useState('');
 
-  // Section 3: Financial Objectives
+  // Financial Objectives
   const [financialTarget, setFinancialTarget] = useState('');
   const [financialAchievement, setFinancialAchievement] = useState('');
 
-  // Section 4: Strategic Objectives (3 Pillars: People, Data, Money)
+  // Strategic Objectives (3 Pillars)
   const [peopleObjective, setPeopleObjective] = useState('');
   const [dataObjective, setDataObjective] = useState('');
   const [moneyObjective, setMoneyObjective] = useState('');
 
-  // Section 5: Staffing
+  // Staffing
   const [headcount, setHeadcount] = useState('');
-  const [keyRoles, setKeyRoles] = useState('');
+  const [keyRoles, setKeyRoles] = useState(''); // Lengthy multi-line textarea
   const [staffingGaps, setStaffingGaps] = useState('');
 
-  // Section 6: Directorate Active Projects & Deliverables Tracking
-  const [projects, setProjects] = useState<ProjectFormItem[]>([
-    {
-      name: 'CCPMS Enterprise Command System',
-      progress: 75,
-      status: 'IN_PROGRESS',
-      spent: '45000',
-      budget: '120000',
-      milestones: 'Core architecture and reporting form completed'
-    }
-  ]);
+  // Active Projects (No stand-in hardcoded title — starts empty with clean placeholders)
+  const [projects, setProjects] = useState<ProjectFormItem[]>([]);
+
+  // File Upload State (R2 Object Storage)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -94,26 +89,58 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     fetchDirectorates();
   }, []);
 
+  // Lock directorate to user's assigned directorate from KingsChat login
   useEffect(() => {
-    if (selectedDirectorateId) {
-      fetchDirectorateProjects(selectedDirectorateId);
+    if (user?.directorate) {
+      if (typeof user.directorate === 'string') {
+        setSelectedDirectorateName(user.directorate);
+      } else if (user.directorate.name) {
+        setSelectedDirectorateName(user.directorate.name);
+        setSelectedDirectorateId(user.directorate.id || '');
+      }
     }
-  }, [selectedDirectorateId]);
+  }, [user]);
 
-  const fetchDirectorateProjects = async (dirId: string) => {
+  // Pre-fill state if editReportData prop is supplied
+  useEffect(() => {
+    if (editReportData) {
+      setTitle(editReportData.title || editReportData.summary?.slice(0, 60) || '');
+      setType(editReportData.type || 'WEEKLY');
+      setPeriod(editReportData.period || todayStr.slice(0, 7));
+      if (editReportData.file_url) setExistingFileUrl(editReportData.file_url);
+
+      if (editReportData.specificGoals) setSpecificGoals(editReportData.specificGoals);
+      else if (editReportData.summary) setSpecificGoals(editReportData.summary);
+
+      if (editReportData.percentageAchievement) setPercentageAchievement(String(editReportData.percentageAchievement));
+      if (editReportData.milestoneProgress) setMilestoneProgress(editReportData.milestoneProgress);
+      if (editReportData.challengesFaced) setChallengesFaced(editReportData.challengesFaced);
+      if (editReportData.financialTarget) setFinancialTarget(String(editReportData.financialTarget));
+      if (editReportData.financialAchievement) setFinancialAchievement(String(editReportData.financialAchievement));
+
+      if (editReportData.strategicObjectives) {
+        if (editReportData.strategicObjectives.people) setPeopleObjective(editReportData.strategicObjectives.people);
+        if (editReportData.strategicObjectives.data) setDataObjective(editReportData.strategicObjectives.data);
+        if (editReportData.strategicObjectives.money) setMoneyObjective(editReportData.strategicObjectives.money);
+      }
+
+      if (editReportData.staffing) {
+        if (editReportData.staffing.headcount) setHeadcount(String(editReportData.staffing.headcount));
+        if (editReportData.staffing.keyRoles) setKeyRoles(editReportData.staffing.keyRoles);
+        if (editReportData.staffing.gaps) setStaffingGaps(editReportData.staffing.gaps);
+      }
+
+      if (Array.isArray(editReportData.projects)) {
+        setProjects(editReportData.projects);
+      }
+    }
+  }, [editReportData]);
+
+  const fetchDirectorates = async () => {
     try {
-      const res: any = await api.get(`/projects?directorateId=${dirId}`);
+      const res: any = await api.get('/directorates');
       if (res.success && res.data && res.data.length > 0) {
-        setProjects(res.data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          code: p.code,
-          progress: p.progress || 0,
-          status: p.status || 'IN_PROGRESS',
-          spent: String(p.spent || 0),
-          budget: String(p.budget || 0),
-          milestones: p.description || '',
-        })));
+        setDirectorates(res.data);
       }
     } catch (_) {}
   };
@@ -122,11 +149,11 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     setProjects([
       ...projects,
       {
-        name: '',
+        name: '', // Clean empty string so input placeholder is visible
         progress: 0,
         status: 'IN_PROGRESS',
         spent: '0',
-        budget: '50000',
+        budget: '0',
         milestones: '',
       }
     ]);
@@ -142,149 +169,28 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
     setProjects(updated);
   };
 
-  // Lock directorate to user's assigned directorate from KingsChat login
-  useEffect(() => {
-    if (user?.directorate) {
-      if (user.directorate.id) setSelectedDirectorateId(user.directorate.id);
-      if (user.directorate.name) setSelectedDirectorateName(user.directorate.name);
-    }
-  }, [user]);
-
-  // Pre-fill state if editReportData prop is supplied
-  useEffect(() => {
-    if (editReportData) {
-      setTitle(editReportData.title || '');
-      setType(editReportData.type || 'MONTHLY');
-      setPeriod(editReportData.period || '2026-M07');
-
-      if (editReportData.directorate) {
-        setSelectedDirectorateId(editReportData.directorate.id || '');
-        setSelectedDirectorateName(editReportData.directorate.name || 'Technology & Digital Innovation');
-      }
-
-      let parsed: any = {};
-      if (editReportData.dataJson) {
-        try {
-          parsed = typeof editReportData.dataJson === 'string' ? JSON.parse(editReportData.dataJson) : editReportData.dataJson;
-        } catch (e) {
-          parsed = {};
-        }
-      }
-
-      if (parsed.directorateName) setSelectedDirectorateName(parsed.directorateName);
-      if (parsed.reportDate) setReportDate(parsed.reportDate);
-      if (parsed.startDate) setStartDate(parsed.startDate);
-      if (parsed.endDate) setEndDate(parsed.endDate);
-      if (parsed.specificGoals) setSpecificGoals(parsed.specificGoals);
-      if (parsed.percentageAchievement) setPercentageAchievement(String(parsed.percentageAchievement));
-      if (parsed.milestoneProgress) setMilestoneProgress(parsed.milestoneProgress);
-      if (parsed.challengesFaced) setChallengesFaced(parsed.challengesFaced);
-      if (parsed.financialTarget) setFinancialTarget(String(parsed.financialTarget));
-      if (parsed.financialAchievement) setFinancialAchievement(String(parsed.financialAchievement));
-
-      if (parsed.strategicObjectives) {
-        if (parsed.strategicObjectives.people) setPeopleObjective(parsed.strategicObjectives.people);
-        if (parsed.strategicObjectives.data) setDataObjective(parsed.strategicObjectives.data);
-        if (parsed.strategicObjectives.money) setMoneyObjective(parsed.strategicObjectives.money);
-      }
-
-      if (parsed.staffing) {
-        if (parsed.staffing.headcount) setHeadcount(String(parsed.staffing.headcount));
-        if (parsed.staffing.keyRoles) setKeyRoles(parsed.staffing.keyRoles);
-        if (parsed.staffing.gaps) setStaffingGaps(parsed.staffing.gaps);
-      }
-
-      if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
-        setProjects(parsed.projects);
-      }
-    }
-  }, [editReportData]);
-
-  const fetchDirectorates = async () => {
-    try {
-      const res: any = await api.get('/directorates');
-      if (res.success && res.data && res.data.length > 0) {
-        setDirectorates(res.data);
-        if (!editReportData && !user?.directorate) {
-          setSelectedDirectorateId(res.data[0].id);
-          setSelectedDirectorateName(res.data[0].name);
-        }
-      }
-    } catch (err) {
-      console.warn('Using official directorate list fallback', err);
-    }
-  };
-
-  const handleDirectorateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    const found = directorates.find((d) => d.id === val || d.name === val || d.code === val);
-    if (found) {
-      setSelectedDirectorateId(found.id || '');
-      setSelectedDirectorateName(found.name);
-    } else {
-      setSelectedDirectorateName(val);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    // Comprehensive Form Validation
     if (!title.trim() || title.trim().length < 5) {
       setErrorMsg('⚠️ Report Title is required (minimum 5 characters).');
       return;
     }
 
-    if (!selectedDirectorateName.trim()) {
-      setErrorMsg('⚠️ Please select a valid Directorate from the dropdown.');
-      return;
-    }
-
-    if (!reportDate) {
-      setErrorMsg('⚠️ Exact Report Date is required.');
-      return;
-    }
-
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-      setErrorMsg('⚠️ Period Start Date cannot be after Period End Date.');
-      return;
-    }
-
     if (!specificGoals.trim() || specificGoals.trim().length < 10) {
-      setErrorMsg('⚠️ Please state specific goals for this period (minimum 10 characters).');
+      setErrorMsg('⚠️ Please state specific goals/achievements for this period (minimum 10 characters).');
       return;
-    }
-
-    if (financialTarget.trim()) {
-      const fTarget = parseFloat(financialTarget.replace(/,/g, ''));
-      if (isNaN(fTarget) || fTarget < 0) {
-        setErrorMsg('⚠️ Financial Target must be a valid non-negative number.');
-        return;
-      }
-    }
-
-    if (financialAchievement.trim()) {
-      const fAchieved = parseFloat(financialAchievement.replace(/,/g, ''));
-      if (isNaN(fAchieved) || fAchieved < 0) {
-        setErrorMsg('⚠️ Financial Achievement must be a valid non-negative number.');
-        return;
-      }
-    }
-
-    if (headcount.trim()) {
-      const hCount = parseInt(headcount.replace(/,/g, ''), 10);
-      if (isNaN(hCount) || hCount < 0) {
-        setErrorMsg('⚠️ Staff Headcount must be a valid non-negative number.');
-        return;
-      }
     }
 
     setSubmitting(true);
 
-    // Package detailed form content into dataJson
     const reportPayload = {
+      title,
+      type,
+      period: period || reportDate.slice(0, 7),
+      summary: specificGoals,
       directorateName: selectedDirectorateName,
       reportDate,
       startDate,
@@ -306,42 +212,40 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
         gaps: staffingGaps,
       },
       projects,
+      file_url: existingFileUrl,
     };
-
-    const targetVal = financialTarget.trim() ? parseFloat(financialTarget.replace(/,/g, '')).toLocaleString() : '0';
-    const achievedVal = financialAchievement.trim() ? parseFloat(financialAchievement.replace(/,/g, '')).toLocaleString() : '0';
-    const headcountVal = headcount.trim() ? headcount : 'N/A';
-
-    const executiveSummary = `[${selectedDirectorateName}] Goal Achievement: ${percentageAchievement}%. Report Date: ${reportDate}. Financial Achievement: ${achievedVal} ESP of ${targetVal} ESP Target. Headcount: ${headcountVal} Staff.`;
 
     try {
       let res: any;
+      let recordId: string;
+
       if (editReportData && editReportData.id) {
-        // UPDATE existing report
-        res = await api.put(`/reports/${editReportData.id}`, {
-          title,
-          type,
-          period: reportDate || period,
-          summary: executiveSummary,
-          directorateId: selectedDirectorateId || user?.directorate?.id,
-          dataJson: JSON.stringify(reportPayload),
-        });
+        // PUT /api/records/:id (update existing)
+        res = await api.put(`/records/${editReportData.id}`, reportPayload);
+        recordId = editReportData.id;
       } else {
-        // CREATE new report
-        res = await api.post('/reports', {
-          title,
-          type,
-          period: reportDate || period,
-          summary: executiveSummary,
-          directorateId: selectedDirectorateId || user?.directorate?.id,
-          dataJson: JSON.stringify(reportPayload),
-        });
+        // POST /api/records (create new)
+        res = await api.post('/records', reportPayload);
+        recordId = res.data?.id;
       }
 
       if (res.success) {
-        const actionText = editReportData ? 'updated' : 'submitted';
-        setSuccessMsg(`Report "${title}" ${actionText} successfully for [${selectedDirectorateName}] on ${reportDate}! It is reflected on the OFEM Executive Command.`);
-        
+        // Handle file upload if a new file is attached
+        if (selectedFile && recordId) {
+          try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            await api.post(`/upload/records/${recordId}`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+          } catch (uploadErr: any) {
+            console.warn('File upload failed:', uploadErr.message);
+          }
+        }
+
+        const actionText = editReportData ? 'updated and resubmitted' : 'submitted';
+        setSuccessMsg(`Report "${title}" ${actionText} successfully! Reflecting live on OFEM Executive Command Center.`);
+
         if (!editReportData) {
           setTitle('');
           setSpecificGoals('');
@@ -350,7 +254,10 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           setPeopleObjective('');
           setDataObjective('');
           setMoneyObjective('');
+          setKeyRoles('');
           setStaffingGaps('');
+          setProjects([]);
+          setSelectedFile(null);
         }
 
         if (onReportSubmitted) {
@@ -378,42 +285,39 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
+            width: '48px', height: '48px', borderRadius: '12px',
             background: 'var(--kingschat-gradient)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 20px rgba(245, 158, 11, 0.3)'
           }}>
             <FileSpreadsheet style={{ width: '26px', height: '26px', color: '#ffffff' }} />
           </div>
           <div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>
-              Directorate Performance Report Form
+              {editReportData ? 'Edit & Resubmit Directorate Report' : 'Directorate Performance Report Form'}
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Selected Directorate: <strong style={{ color: '#60a5fa' }}>{selectedDirectorateName}</strong>
+              Assigned Directorate: <strong style={{ color: '#60a5fa' }}>{selectedDirectorateName}</strong>
             </p>
           </div>
         </div>
-        <span className="badge badge-role" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-          Director Mode
-        </span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {onCancelEdit && (
+            <button type="button" onClick={onCancelEdit} className="btn btn-secondary btn-sm">
+              Cancel
+            </button>
+          )}
+          <span className="badge badge-role" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+            AD Director Mode
+          </span>
+        </div>
       </div>
 
       {successMsg && (
         <div style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          borderRadius: '12px',
-          padding: '16px',
-          color: '#34d399',
-          fontSize: '0.9rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
+          background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px', padding: '16px', color: '#34d399', fontSize: '0.9rem',
+          display: 'flex', alignItems: 'center', gap: '10px'
         }}>
           <CheckCircle2 style={{ width: '20px', height: '20px', flexShrink: 0 }} />
           {successMsg}
@@ -422,15 +326,9 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
       {errorMsg && (
         <div style={{
-          background: 'rgba(244, 63, 94, 0.15)',
-          border: '1px solid rgba(244, 63, 94, 0.3)',
-          borderRadius: '12px',
-          padding: '16px',
-          color: '#f87171',
-          fontSize: '0.9rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
+          background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)',
+          borderRadius: '12px', padding: '16px', color: '#f87171', fontSize: '0.9rem',
+          display: 'flex', alignItems: 'center', gap: '10px'
         }}>
           <AlertCircle style={{ width: '20px', height: '20px', flexShrink: 0 }} />
           {errorMsg}
@@ -438,23 +336,17 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
       )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* SECTION 1: DIRECTORATE SELECTION, GENERAL INFO, DATES & SPECIFIC GOALS */}
+        {/* SECTION 1: GENERAL INFO, DATES & GOALS */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Target style={{ width: '20px', height: '20px', color: 'var(--accent-blue)' }} />
-            Section 1: Directorate Selection, Calendar Dates & Specific Goals
+            Section 1: General Details, Dates & Specific Goals
           </h3>
 
-          {/* LOCKED DIRECTORATE FIELD (BOUND STRICTLY TO KINGSCHAT AUTHORIZED USER) */}
           <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
-            padding: '16px 20px',
-            borderRadius: '12px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.4)',
+            padding: '16px 20px', borderRadius: '12px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{
@@ -467,26 +359,15 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
               </div>
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
-                  Assigned Directorate (Locked to KingsChat Roster)
+                  Assigned Directorate
                 </label>
                 <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', marginTop: '2px' }}>
-                  🏢 {user?.directorate?.name || selectedDirectorateName}
+                  🏢 {selectedDirectorateName}
                 </div>
               </div>
             </div>
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              padding: '6px 12px',
-              borderRadius: '20px',
-              background: 'rgba(16, 185, 129, 0.15)',
-              color: '#34d399',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              🔒 Verified
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              🔒 Verified Roster
             </span>
           </div>
 
@@ -499,7 +380,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                 type="text"
                 required
                 className="input-field"
-                placeholder="e.g. July 2026 Directorate Performance Summary"
+                placeholder="e.g., August 2026 Technology & Digital Innovation Summary"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -516,64 +397,36 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
             </div>
           </div>
 
-          {/* INTERACTIVE CALENDAR DATES ROW */}
+          {/* DATES ROW */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '16px',
-            marginBottom: '16px',
-            padding: '16px',
-            background: 'rgba(15, 23, 42, 0.5)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)'
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px',
+            padding: '16px', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', border: '1px solid var(--border-color)'
           }}>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Calendar style={{ width: '14px', height: '14px', color: '#ffffff' }} /> Exact Report Date *
+                <Calendar style={{ width: '14px', height: '14px', color: '#ffffff' }} /> Submission Date *
               </label>
-              <input
-                type="date"
-                required
-                className="input-field"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-              />
+              <input type="date" required className="input-field" value={reportDate} onChange={(e) => setReportDate(e.target.value)} />
             </div>
-
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                Period Start Date
-              </label>
-              <input
-                type="date"
-                className="input-field"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Period Start Date</label>
+              <input type="date" className="input-field" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
-
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                Period End Date
-              </label>
-              <input
-                type="date"
-                className="input-field"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Period End Date</label>
+              <input type="date" className="input-field" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
 
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-              State Specific Goals for this Period *
+              State Specific Goals & Achievements for this Period *
             </label>
             <textarea
-              rows={3}
+              rows={4}
               required
               className="input-field"
-              placeholder="Outline the core operational and strategic goals planned for this period..."
+              placeholder="Outline the core operational and strategic goals planned and achieved for this reporting period..."
               value={specificGoals}
               onChange={(e) => setSpecificGoals(e.target.value)}
               style={{ resize: 'vertical' }}
@@ -581,7 +434,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           </div>
         </div>
 
-        {/* SECTION 2: PERFORMANCE, MILESTONES & CHALLENGES */}
+        {/* SECTION 2: ACHIEVEMENTS, MILESTONES & CHALLENGES */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <TrendingUp style={{ width: '20px', height: '20px', color: 'var(--accent-emerald)' }} />
@@ -590,7 +443,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-              Overall Percentage Achievement Dropdown (%)
+              Overall Target Achievement (%)
             </label>
             <select
               className="input-field"
@@ -677,23 +530,22 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           </div>
         </div>
 
-        {/* SECTION 4: STRATEGIC OBJECTIVES (3 PILLARS: PEOPLE, DATA, MONEY) */}
+        {/* SECTION 4: STRATEGIC 3 PILLARS */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Database style={{ width: '20px', height: '20px', color: 'var(--accent-cyan)' }} />
-            Section 4: Strategic Objectives (3 Pillars: People, Data, Money)
+            Section 4: Strategic Objectives (People, Data, Money)
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '16px', borderRadius: '12px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Users style={{ width: '16px', height: '16px' }} />
-                1. People Pillar Objectives (Human Capital, Training & Capacity)
+                <Users style={{ width: '16px', height: '16px' }} /> 1. People Pillar Objectives
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 className="input-field"
-                placeholder="State staff development, team productivity, and training initiatives..."
+                placeholder="State staff development, team productivity, and capacity building..."
                 value={peopleObjective}
                 onChange={(e) => setPeopleObjective(e.target.value)}
               />
@@ -701,11 +553,10 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
             <div style={{ background: 'rgba(6, 182, 212, 0.05)', border: '1px solid rgba(6, 182, 212, 0.2)', padding: '16px', borderRadius: '12px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Database style={{ width: '16px', height: '16px' }} />
-                2. Data Pillar Objectives (Analytics Accuracy, System Reporting & Metrics)
+                <Database style={{ width: '16px', height: '16px' }} /> 2. Data Pillar Objectives
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 className="input-field"
                 placeholder="State data integrity, analytics reporting, and system performance metrics..."
                 value={dataObjective}
@@ -715,11 +566,10 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
 
             <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '16px', borderRadius: '12px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <EspIcon style={{ width: '18px', height: '18px' }} />
-                3. Money Pillar Objectives (Financial Efficiency, ROI & Cost Management)
+                <EspIcon style={{ width: '18px', height: '18px' }} /> 3. Money Pillar Objectives
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 className="input-field"
                 placeholder="State budget efficiency, cost savings, and financial optimization strategy..."
                 value={moneyObjective}
@@ -729,14 +579,14 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           </div>
         </div>
 
-        {/* SECTION 5: STAFFING */}
+        {/* SECTION 5: STAFFING & KEY ROLES (LENGTHY TEXTAREA INPUT) */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Users style={{ width: '20px', height: '20px', color: 'var(--accent-purple)' }} />
-            Section 5: Directorate Staffing & Team Roster
+            Section 5: Directorate Staffing & Key Roles
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                 Active Headcount (Staff Count)
@@ -751,35 +601,38 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
               />
             </div>
 
+            {/* LENGTHY TEXTAREA FOR KEY DIRECTORATE ROLES */}
             <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-                Key Directorate Roles Filled
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#60a5fa', display: 'block', marginBottom: '6px' }}>
+                Key Directorate Roles Filled & Responsibilities (Lengthy Input)
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={4}
                 className="input-field"
-                placeholder="e.g. Lead Engineer, Project Manager, QA Analyst"
+                placeholder="Detailed breakdown of key roles filled in your directorate (e.g., Lead Architect, Senior Software Engineer, Data Governance Lead, Operations Manager, QA Specialist)..."
                 value={keyRoles}
                 onChange={(e) => setKeyRoles(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                Staffing Needs & Recruitment Gaps
+              </label>
+              <textarea
+                rows={3}
+                className="input-field"
+                placeholder="Outline required additions, skill gaps, or hiring priorities..."
+                value={staffingGaps}
+                onChange={(e) => setStaffingGaps(e.target.value)}
+                style={{ resize: 'vertical' }}
               />
             </div>
           </div>
-
-          <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-              Staffing Needs & Recruitment Gaps
-            </label>
-            <textarea
-              rows={2}
-              className="input-field"
-              placeholder="Outline required additions, skill gaps, or hiring priorities..."
-              value={staffingGaps}
-              onChange={(e) => setStaffingGaps(e.target.value)}
-            />
-          </div>
         </div>
 
-        {/* SECTION 6: DIRECTORATE PROJECTS TRACKING */}
+        {/* SECTION 6: PROJECTS (CLEAN INPUT PLACEHOLDERS, NO STAND-IN DEFAULT TITLE) */}
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
@@ -798,30 +651,26 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           </div>
 
           {projects.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px' }}>
-              No active projects listed. Click "Add Project" to add your Directorate's key projects.
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
+              No active projects listed. Click <strong>"Add Project"</strong> to log your Directorate's active projects.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {projects.map((proj, idx) => (
                 <div key={idx} style={{
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  border: '1px solid var(--border-color)',
-                  padding: '18px',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px'
+                  background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border-color)',
+                  padding: '18px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '14px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
                         Project Title #{idx + 1}
                       </label>
+                      {/* CLEAN HTML PLACEHOLDER */}
                       <input
                         type="text"
                         className="input-field"
-                        placeholder="e.g. CCPMS Mobile Client Integration"
+                        placeholder="e.g., Cloud Infrastructure & Architecture Upgrade"
                         value={proj.name}
                         onChange={(e) => handleProjectChange(idx, 'name', e.target.value)}
                       />
@@ -849,13 +698,9 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                       type="button"
                       onClick={() => handleRemoveProject(idx)}
                       style={{
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#f87171',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        marginTop: '18px'
+                        background: 'rgba(239, 68, 68, 0.15)', color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px',
+                        padding: '8px', cursor: 'pointer', marginTop: '18px'
                       }}
                       title="Remove Project"
                     >
@@ -870,9 +715,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                         <span style={{ fontWeight: 800, color: '#60a5fa' }}>{proj.progress}%</span>
                       </div>
                       <input
-                        type="range"
-                        min="0"
-                        max="100"
+                        type="range" min="0" max="100"
                         value={proj.progress}
                         onChange={(e) => handleProjectChange(idx, 'progress', parseInt(e.target.value, 10))}
                         style={{ width: '100%', cursor: 'pointer', accentColor: '#3b82f6' }}
@@ -884,9 +727,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                         Spent Budget (Espees - ESP)
                       </label>
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        className="input-field"
+                        type="text" inputMode="numeric" className="input-field"
                         placeholder="e.g. 45000"
                         value={proj.spent}
                         onChange={(e) => handleProjectChange(idx, 'spent', e.target.value)}
@@ -899,8 +740,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
                       Key Milestones & Deliverables Highlight
                     </label>
                     <input
-                      type="text"
-                      className="input-field"
+                      type="text" className="input-field"
                       placeholder="e.g. Released v1.2 API endpoints, updated database schemas..."
                       value={proj.milestones}
                       onChange={(e) => handleProjectChange(idx, 'milestones', e.target.value)}
@@ -912,8 +752,58 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           )}
         </div>
 
+        {/* SECTION 7: OFFICIAL DOCUMENT ATTACHMENT (CLOUDFLARE R2) */}
+        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Upload style={{ width: '20px', height: '20px', color: 'var(--kingschat-gold)' }} />
+            Section 7: Official Document Attachment (Cloudflare R2 Storage)
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+            Attach full PDF/DOCX report documentation or financial statements for executive review.
+          </p>
+
+          <div style={{
+            border: '2px dashed rgba(59, 130, 246, 0.3)',
+            borderRadius: '12px',
+            padding: '24px',
+            textAlign: 'center',
+            background: 'rgba(15, 23, 42, 0.4)'
+          }}>
+            <input
+              type="file"
+              id="report-file-input"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setSelectedFile(e.target.files[0]);
+                }
+              }}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="report-file-input" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <Upload style={{ width: '32px', height: '32px', color: '#60a5fa' }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
+                {selectedFile ? `Selected: ${selectedFile.name}` : 'Click to select document (PDF, DOCX, Images)'}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Max file size: 20 MB • Stores on Cloudflare R2 Object Storage
+              </span>
+            </label>
+            {existingFileUrl && !selectedFile && (
+              <div style={{ marginTop: '12px', fontSize: '0.8rem', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <FileText style={{ width: '16px', height: '16px' }} /> Attached File: <a href={existingFileUrl} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>View Document</a>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Submit Action */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          {onCancelEdit && (
+            <button type="button" onClick={onCancelEdit} className="btn btn-secondary" style={{ padding: '14px 24px' }}>
+              Cancel
+            </button>
+          )}
           <button
             type="submit"
             disabled={submitting}
@@ -921,7 +811,7 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
             style={{ padding: '14px 28px', fontSize: '1rem', borderRadius: '12px' }}
           >
             <Send style={{ width: '18px', height: '18px' }} />
-            {submitting ? 'Submitting Report...' : 'Submit Directorate Report'}
+            {submitting ? 'Submitting Report...' : editReportData ? 'Resubmit Report to OFEM' : 'Submit Directorate Report'}
           </button>
         </div>
       </form>

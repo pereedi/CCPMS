@@ -1,79 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { DashboardSummary } from '../../types';
-import { Target, FolderKanban, Building2, TrendingUp, Users, Database, FileSpreadsheet, Eye, Sparkles, CheckCircle, Check } from 'lucide-react';
+import { Target, Building2, TrendingUp, Users, Database, FileSpreadsheet, Sparkles, CheckCircle, Check } from 'lucide-react';
 import { EspIcon } from '../common/EspIcon';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 export const OverviewTab: React.FC = () => {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [reportsAnalytics, setReportsAnalytics] = useState<any | null>(null);
+  const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedReportModal, setSelectedReportModal] = useState<any | null>(null);
-  const [approvingReportId, setApprovingReportId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardRecords();
   }, []);
 
-  const handleQuickApprove = async (reportId: string) => {
-    setApprovingReportId(reportId);
+  const fetchDashboardRecords = async () => {
     try {
-      await api.post(`/reports/${reportId}/approve`, {
-        action: 'APPROVE',
-        comments: 'Quick approved from Executive Command Dashboard'
-      });
-      await fetchDashboardData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to approve report');
+      const res: any = await api.get('/records');
+      if (res.success && res.data) {
+        setRecords(res.data);
+      }
+    } catch (err) {
+      console.warn('Dashboard records fetch error', err);
     } finally {
-      setApprovingReportId(null);
+      setLoading(false);
     }
   };
 
-  const fetchDashboardData = async () => {
+  const handleQuickApprove = async (recordId: string) => {
+    setApprovingId(recordId);
     try {
-      const [sumRes, repRes]: any[] = await Promise.all([
-        api.get('/dashboard/summary'),
-        api.get('/dashboard/reports-analytics'),
-      ]);
-
-      if (sumRes.success) setSummary(sumRes.data);
-      if (repRes.success) setReportsAnalytics(repRes.data);
-    } catch (err) {
-      console.warn('Dashboard fetch error, using fallbacks', err);
-      setSummary({
-        kpis: {
-          total: 2,
-          avgScore: 98.5,
-          statusBreakdown: { EXCELLENT: 2, GOOD: 0, NEEDS_ATTENTION: 0, CRITICAL: 0 }
-        },
-        projects: {
-          total: 1,
-          avgProgress: 65,
-          totalBudget: 120000,
-          totalSpent: 45000,
-          byStatus: { IN_PROGRESS: 1 }
-        },
-        directoratesCount: 2,
-        pendingReportsCount: 1,
-        recentAuditLogs: []
+      await api.post('/reviews/process', {
+        recordId,
+        action: 'APPROVE',
+        comment: 'Quick approved from Executive Command Dashboard',
       });
-      setReportsAnalytics({
-        overview: {
-          totalReportsCount: 2,
-          avgAchievementPercent: 90,
-          totalFinancialTarget: 150000,
-          totalFinancialAchievement: 135000
-        },
-        directorateStats: [
-          { name: 'Technology & Innovation', code: 'TECH', avgAchievement: 90, financialTarget: 150000, financialAchievement: 135000 },
-          { name: 'Finance & Logistics', code: 'FINLOG', avgAchievement: 85, financialTarget: 100000, financialAchievement: 90000 }
-        ],
-        reports: []
-      });
+      await fetchDashboardRecords();
+    } catch (err: any) {
+      alert(err.message || 'Failed to approve report');
     } finally {
-      setLoading(false);
+      setApprovingId(null);
     }
   };
 
@@ -81,14 +46,49 @@ export const OverviewTab: React.FC = () => {
     return <div style={{ padding: '40px', color: 'var(--text-secondary)' }}>Loading executive command analytics...</div>;
   }
 
-  const chartData = reportsAnalytics?.directorateStats?.length ? reportsAnalytics.directorateStats : [
-    { name: 'Technology & Innovation', code: 'TECH', avgAchievement: 90, financialTarget: 150000, financialAchievement: 135000 },
-    { name: 'Finance & Logistics', code: 'FINLOG', avgAchievement: 85, financialTarget: 100000, financialAchievement: 90000 }
+  // Aggregate metrics from submitted records
+  const totalSubmissions = records.length;
+  const approvedCount = records.filter(r => r.status === 'APPROVED').length;
+  const pendingCount = records.filter(r => r.status === 'SUBMITTED').length;
+  const approvalRate = totalSubmissions > 0 ? Math.round((approvedCount / totalSubmissions) * 100) : 100;
+
+  // Average achievement %
+  const totalAchievementPct = records.reduce((acc, r) => acc + (parseFloat(r.percentageAchievement || '90') || 90), 0);
+  const avgAchievement = totalSubmissions > 0 ? Math.round(totalAchievementPct / totalSubmissions) : 90;
+
+  // Total Financial Achievements
+  const totalFinancialTarget = records.reduce((acc, r) => acc + (parseFloat(r.financialTarget || '0') || 0), 0);
+  const totalFinancialAchievement = records.reduce((acc, r) => acc + (parseFloat(r.financialAchievement || '0') || 0), 0);
+
+  // Group by Directorate for chart
+  const directorateMap: Record<string, { code: string; count: number; avgAchievement: number; financialTarget: number; financialAchievement: number }> = {};
+  
+  records.forEach(r => {
+    const code = r.directorateName || r.username || 'TECH_DIGITAL';
+    if (!directorateMap[code]) {
+      directorateMap[code] = { code: code.slice(0, 12), count: 0, avgAchievement: 0, financialTarget: 0, financialAchievement: 0 };
+    }
+    directorateMap[code].count += 1;
+    directorateMap[code].avgAchievement += (parseFloat(r.percentageAchievement || '90') || 90);
+    directorateMap[code].financialTarget += (parseFloat(r.financialTarget || '0') || 0);
+    directorateMap[code].financialAchievement += (parseFloat(r.financialAchievement || '0') || 0);
+  });
+
+  const chartData = Object.values(directorateMap).map(d => ({
+    ...d,
+    avgAchievement: Math.round(d.avgAchievement / (d.count || 1)),
+  }));
+
+  // Default fallback chart data if no submissions yet
+  const displayChartData = chartData.length > 0 ? chartData : [
+    { code: 'TECH_DIGITAL', avgAchievement: 95, financialTarget: 150000, financialAchievement: 140000 },
+    { code: 'FINTECH', avgAchievement: 88, financialTarget: 120000, financialAchievement: 110000 },
+    { code: 'SOCIAL_MEDIA', avgAchievement: 92, financialTarget: 90000, financialAchievement: 85000 },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Super Admin Executive Top Banner */}
+      {/* Executive Command Top Banner */}
       <div className="glass-panel glow-panel" style={{
         padding: '24px 32px',
         borderRadius: '16px',
@@ -101,21 +101,21 @@ export const OverviewTab: React.FC = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <Sparkles style={{ width: '18px', height: '18px', color: 'var(--kingschat-gold)' }} />
-            <span className="badge badge-role">SUPER ADMIN EXECUTIVE COMMAND</span>
+            <span className="badge badge-role">OFEM EXECUTIVE COMMAND CENTER</span>
           </div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>
-            Global Directorate Performance & Submitted Reports Oversight
+            Global Directorate Performance & Submitted Records Oversight
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            Real-time Aggregation of Submitted Reports, Strategic Pillars (People, Data, Money), and Financial Targets
+            Real-time Aggregation of Directorate Submissions, KPI Targets, and Strategic 3 Pillars (People, Data, Money)
           </p>
         </div>
-        <button onClick={fetchDashboardData} className="btn btn-secondary btn-sm">
+        <button onClick={fetchDashboardRecords} className="btn btn-secondary btn-sm">
           Refresh Live Analytics
         </button>
       </div>
 
-      {/* KPI Metric Cards Grid */}
+      {/* Metric Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -123,23 +123,23 @@ export const OverviewTab: React.FC = () => {
             <TrendingUp style={{ width: '20px', height: '20px', color: 'var(--accent-emerald)' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-            {reportsAnalytics?.overview?.avgAchievementPercent || 90}%
+            {avgAchievement}%
           </div>
           <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '4px' }}>
-            Based on Submitted Directorate Reports
+            Based on Live Directorate Submissions
           </div>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>SUBMITTED REPORTS</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>TOTAL REPORT RECORDS</span>
             <FileSpreadsheet style={{ width: '20px', height: '20px', color: 'var(--accent-blue)' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-            {reportsAnalytics?.overview?.totalReportsCount || 1}
+            {totalSubmissions}
           </div>
           <div style={{ fontSize: '0.75rem', color: '#60a5fa', marginTop: '4px' }}>
-            Reflecting in Super Admin Page
+            {pendingCount} Pending OFEM Review
           </div>
         </div>
 
@@ -149,23 +149,23 @@ export const OverviewTab: React.FC = () => {
             <EspIcon style={{ width: '22px', height: '22px' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-            {(reportsAnalytics?.overview?.totalFinancialAchievement || 135000).toLocaleString()} ESP
+            {totalFinancialAchievement.toLocaleString()} ESP
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Target: {(reportsAnalytics?.overview?.totalFinancialTarget || 150000).toLocaleString()} ESP
+            Target: {totalFinancialTarget.toLocaleString()} ESP
           </div>
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>ORGANIZATION HEALTH</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>APPROVAL RATE</span>
             <Building2 style={{ width: '20px', height: '20px', color: 'var(--accent-cyan)' }} />
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-            92.8%
+            {approvalRate}%
           </div>
           <div style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '4px' }}>
-            People, Data & Money Balance
+            {approvedCount} Approved Reports
           </div>
         </div>
       </div>
@@ -219,19 +219,19 @@ export const OverviewTab: React.FC = () => {
         </div>
       </div>
 
-      {/* NEW CHARTS SECTION CREATED FROM SUBMITTED REPORTS */}
+      {/* LIVE CHARTS SECTION */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
         {/* Chart 1: Directorate Percentage Achievement Leaderboard */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp style={{ width: '18px', height: '18px', color: '#34d399' }} />
-            Submitted Reports: Percentage Achievement (% by Directorate)
+            Submitted Records: Percentage Achievement (% by Directorate)
           </h3>
           <div style={{ height: '260px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="code" stroke="#9ca3af" fontSize={12} />
+                <XAxis dataKey="code" stroke="#9ca3af" fontSize={11} />
                 <YAxis domain={[0, 100]} stroke="#9ca3af" fontSize={12} />
                 <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
                 <Bar dataKey="avgAchievement" name="Achievement %" fill="#10b981" radius={[6, 6, 0, 0]} />
@@ -248,9 +248,9 @@ export const OverviewTab: React.FC = () => {
           </h3>
           <div style={{ height: '260px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={displayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="code" stroke="#9ca3af" fontSize={12} />
+                <XAxis dataKey="code" stroke="#9ca3af" fontSize={11} />
                 <YAxis stroke="#9ca3af" fontSize={12} />
                 <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px' }} />
                 <Legend />
@@ -262,12 +262,12 @@ export const OverviewTab: React.FC = () => {
         </div>
       </div>
 
-      {/* RECENTLY SUBMITTED REPORTS ACCESS TABLE FOR SUPER ADMIN */}
-      {reportsAnalytics?.reports && reportsAnalytics.reports.length > 0 && (
+      {/* SUBMITTED RECORDS TABLE FOR EXECUTIVE COMMAND */}
+      {records.length > 0 && (
         <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileSpreadsheet style={{ width: '20px', height: '20px', color: '#60a5fa' }} />
-            Submitted Directorate Reports Feed (Super Admin Access)
+            Submitted Directorate Records Overview (OFEM Command Access)
           </h3>
 
           <div style={{ overflowX: 'auto' }}>
@@ -284,27 +284,31 @@ export const OverviewTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {reportsAnalytics.reports.map((r: any) => {
-                  const isApproved = ['APPROVED', 'DIRECTOR_APPROVED', 'SUPER_ADMIN_APPROVED'].includes(r.status);
+                {records.map((r: any) => {
+                  const isApproved = r.status === 'APPROVED';
                   return (
                     <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
-                        {r.title}
+                        {r.title || `${r.period} Report`}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span className="badge badge-role" style={{ fontSize: '0.7rem' }}>
-                          {r.directorate?.code || 'HQ'}
+                          {r.directorateName || r.username}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span className="badge badge-excellent">
-                          {r.achievementPct || 85}%
+                          {r.percentageAchievement || 90}%
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         {isApproved ? (
                           <span className="badge badge-excellent" style={{ fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
                             ✓ APPROVED
+                          </span>
+                        ) : r.status === 'RETURNED' ? (
+                          <span className="badge badge-critical" style={{ fontSize: '0.7rem', background: 'rgba(244, 63, 94, 0.2)', color: '#f87171' }}>
+                            ↩ RETURNED
                           </span>
                         ) : (
                           <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
@@ -313,24 +317,26 @@ export const OverviewTab: React.FC = () => {
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#60a5fa' }}>
-                        {r.author?.name || 'Director'}
+                        @{r.username}
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {new Date(r.createdAt).toLocaleDateString()}
+                        {new Date(r.submittedAt).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        {!isApproved ? (
+                        {!isApproved && r.status !== 'RETURNED' ? (
                           <button
                             onClick={() => handleQuickApprove(r.id)}
-                            disabled={approvingReportId === r.id}
+                            disabled={approvingId === r.id}
                             className="btn btn-kingschat btn-sm"
                             style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700 }}
                           >
                             <Check style={{ width: '12px', height: '12px' }} />
-                            {approvingReportId === r.id ? 'Approving...' : 'Approve'}
+                            {approvingId === r.id ? 'Approving...' : 'Approve'}
                           </button>
                         ) : (
-                          <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 700 }}>Approved</span>
+                          <span style={{ fontSize: '0.75rem', color: isApproved ? '#34d399' : '#f87171', fontWeight: 700 }}>
+                            {isApproved ? 'Approved' : 'Returned'}
+                          </span>
                         )}
                       </td>
                     </tr>

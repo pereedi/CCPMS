@@ -7,6 +7,7 @@ import reviewsRouter from './reviews/reviews.router';
 import uploadRouter from './uploads/upload.router';
 import directoratesRoutes from './directorates/directorates.routes';
 import notificationsRoutes from './notifications/notifications.routes';
+import auditRoutes from './audit/audit.routes';
 import { AuthController } from './auth/auth.controller';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -40,6 +41,7 @@ app.use('/api/reviews',       reviewsRouter);
 app.use('/api/upload',        uploadRouter);
 app.use('/api/directorates',  directoratesRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/audit',         auditRoutes);
 
 // SPA Client Fallback
 app.use((req, res, next) => {

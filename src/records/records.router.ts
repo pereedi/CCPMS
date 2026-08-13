@@ -11,23 +11,43 @@ router.use(authMiddleware);
 /**
  * POST /api/records
  * AD submits a new record for their directorate.
- * Body: { type, period, summary, kpi_results }
+ * Body: { title, type, period, summary, kpi_results, projects, file_url }
  */
 router.post('/', requireAuth, requireRole('AD'), async (req: any, res) => {
   try {
-    const { type, period, summary, kpi_results } = req.body;
+    const { title, type, period, summary, kpi_results, projects, file_url } = req.body;
     if (!type || !period || !summary) {
       return sendError(res, 'type, period and summary are required', 400);
     }
     const record = await svc.createRecord({
       username:    req.user!.username,
+      title,
       type,
       period,
       summary,
       kpi_results: kpi_results ?? [],
-      file_url:    null,
+      projects:    projects ?? [],
+      file_url:    file_url ?? null,
     });
-    return sendSuccess(res, record, 'Record submitted', 201);
+    return sendSuccess(res, record, 'Record submitted successfully', 201);
+  } catch (e: any) {
+    return sendError(res, e.message, 500);
+  }
+});
+
+/**
+ * PUT /api/records/:id
+ * Edit/Resubmit a report (AD or OFEM update)
+ */
+router.put('/:id', requireAuth, async (req: any, res) => {
+  try {
+    const record = await svc.updateRecord(
+      req.params.id,
+      req.user!.username,
+      req.user!.role,
+      req.body,
+    );
+    return sendSuccess(res, record, 'Report updated successfully');
   } catch (e: any) {
     return sendError(res, e.message, 500);
   }

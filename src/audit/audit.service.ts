@@ -1,2 +1,10 @@
-// Removed in Architecture Brief v2 rebuild.
-export {};
+import { prisma } from '../config/database';
+
+export class AuditService {
+  async getAuditLogs(limit = 100) {
+    return (prisma as any).auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+}
