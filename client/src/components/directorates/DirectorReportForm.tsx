@@ -752,51 +752,6 @@ export const DirectorReportForm: React.FC<DirectorReportFormProps> = ({
           )}
         </div>
 
-        {/* SECTION 7: OFFICIAL DOCUMENT ATTACHMENT (CLOUDFLARE R2) */}
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Upload style={{ width: '20px', height: '20px', color: 'var(--kingschat-gold)' }} />
-            Section 7: Official Document Attachment (Cloudflare R2 Storage)
-          </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-            Attach full PDF/DOCX report documentation or financial statements for executive review.
-          </p>
-
-          <div style={{
-            border: '2px dashed rgba(59, 130, 246, 0.3)',
-            borderRadius: '12px',
-            padding: '24px',
-            textAlign: 'center',
-            background: 'rgba(15, 23, 42, 0.4)'
-          }}>
-            <input
-              type="file"
-              id="report-file-input"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setSelectedFile(e.target.files[0]);
-                }
-              }}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="report-file-input" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <Upload style={{ width: '32px', height: '32px', color: '#60a5fa' }} />
-              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
-                {selectedFile ? `Selected: ${selectedFile.name}` : 'Click to select document (PDF, DOCX, Images)'}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Max file size: 20 MB • Stores on Cloudflare R2 Object Storage
-              </span>
-            </label>
-            {existingFileUrl && !selectedFile && (
-              <div style={{ marginTop: '12px', fontSize: '0.8rem', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                <FileText style={{ width: '16px', height: '16px' }} /> Attached File: <a href={existingFileUrl} target="_blank" rel="noreferrer" style={{ color: '#60a5fa', textDecoration: 'underline' }}>View Document</a>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Submit Action */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           {onCancelEdit && (
