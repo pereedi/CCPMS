@@ -7,59 +7,24 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Role {
-  id          String           @id @default(uuid())
-  name        String           @unique // SUPER_ADMIN, DIRECTOR
-  description String?
-  permissions RolePermission[]
-  users       User[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+// ─── Core identity ────────────────────────────────────────────────────────────
+
+model AuthorizedUser {
+  username     String   @id                  // KingsChat handle, lowercase, no @
+  name         String
+  role         String                        // "OFEM" | "AD" | "BOTH"
+  directorate  String?                       // one of 7 directorate codes; nullable for pure-OFEM users
+  email        String?
+  profilePhoto String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  records      Record[] @relation("RecordSubmitter")
+  asSubject    Review[] @relation("ReviewSubject")
+  asReviewer   Review[] @relation("ReviewerUser")
 }
 
-model Permission {
-  id          String           @id @default(uuid())
-  name        String           @unique
-  resource    String
-  action      String
-  description String?
-  roles       RolePermission[]
-  createdAt   DateTime         @default(now())
-}
-
-model RolePermission {
-  roleId       String
-  permissionId String
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-}
-
-model User {
-  id              String           @id @default(uuid())
-  kingschatUserId String           @unique
-  name            String
-  email           String?
-  phone           String?
-  profilePhoto    String?
-  status          String           @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
-  roleId          String
-  role            Role             @relation(fields: [roleId], references: [id])
-  directorateId   String?
-  directorate     Directorate?     @relation(fields: [directorateId], references: [id])
-  departmentId    String?
-  department      Department?      @relation(fields: [departmentId], references: [id])
-  lastLogin       DateTime?
-  createdProjects Project[]        @relation("ProjectManager")
-  assignedTasks   Task[]
-  submittedReports Report[]        @relation("ReportAuthor")
-  reportApprovals ReportApproval[]
-  notifications   Notification[]
-  auditLogs       AuditLog[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-}
+// ─── Directorate ──────────────────────────────────────────────────────────────
 
 model Organization {
   id           String        @id @default(uuid())
@@ -78,185 +43,41 @@ model Directorate {
   description    String?
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  departments    Department[]
-  users          User[]
-  projects       Project[]
-  kpis           KPI[]
-  reports        Report[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
 
-model Department {
-  id            String      @id @default(uuid())
-  name          String
-  code          String      @unique
-  directorateId String
-  directorate   Directorate @relation(fields: [directorateId], references: [id], onDelete: Cascade)
-  users         User[]
-  projects      Project[]
-  kpis          KPI[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+// ─── Submissions & Reviews ────────────────────────────────────────────────────
+
+model Record {
+  id          String         @id @default(uuid())
+  username    String
+  submitter   AuthorizedUser @relation("RecordSubmitter", fields: [username], references: [username])
+  records     String                         // JSON string: { type, period, summary, kpi_results[], file_url? }
+  submittedAt DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
-model Project {
-  id            String       @id @default(uuid())
-  name          String
-  code          String       @unique
-  description   String?
-  status        String       @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED, ON_HOLD, RISKY
-  progress      Float        @default(0.0) // 0-100%
-  budget        Float        @default(0.0)
-  spent         Float        @default(0.0)
-  startDate     DateTime?
-  endDate       DateTime?
-  directorateId String
-  directorate   Directorate  @relation(fields: [directorateId], references: [id])
-  departmentId  String?
-  department    Department?  @relation(fields: [departmentId], references: [id])
-  managerId     String?
-  manager       User?        @relation("ProjectManager", fields: [managerId], references: [id])
-  milestones    Milestone[]
-  tasks         Task[]
-  budgets       Budget[]
-  attachments   Attachment[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+model Review {
+  id                String         @id @default(uuid())
+  username          String                       // whose record is being reviewed
+  subject           AuthorizedUser @relation("ReviewSubject",  fields: [username],          references: [username])
+  reviewersUsername String                       // must resolve to OFEM or BOTH
+  reviewer          AuthorizedUser @relation("ReviewerUser",   fields: [reviewersUsername],  references: [username])
+  report_url        String                       // R2/B2 object URL
+  status            String         @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedAt        DateTime?
+  createdAt         DateTime       @default(now())
 }
 
-model Milestone {
-  id          String    @id @default(uuid())
-  title       String
-  description String?
-  dueDate     DateTime?
-  status      String    @default("PENDING") // PENDING, COMPLETED, OVERDUE
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Task {
-  id          String    @id @default(uuid())
-  title       String
-  description String?
-  status      String    @default("TODO") // TODO, IN_PROGRESS, COMPLETED
-  priority    String    @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
-  dueDate     DateTime?
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assigneeId  String?
-  assignee    User?     @relation(fields: [assigneeId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Budget {
-  id        String   @id @default(uuid())
-  title     String
-  category  String // OPERATIONAL, CAPITAL, REVENUE, PROJECT
-  allocated Float
-  spent     Float    @default(0.0)
-  year      Int
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model KPICategory {
-  id          String   @id @default(uuid())
-  name        String   @unique // Financial, Operational, Customer, Learning & Growth
-  description String?
-  kpis        KPI[]
-  createdAt   DateTime @default(now())
-}
-
-model KPI {
-  id               String      @id @default(uuid())
-  name             String
-  code             String      @unique
-  description      String?
-  unit             String // "%", "USD", "Count", "Hours"
-  weight           Float       @default(10.0) // Weight %
-  targetValue      Float
-  currentValue     Float       @default(0.0)
-  performanceScore Float       @default(0.0)
-  status           String      @default("NEEDS_ATTENTION") // EXCELLENT, GOOD, NEEDS_ATTENTION, CRITICAL
-  categoryId       String
-  category         KPICategory @relation(fields: [categoryId], references: [id])
-  directorateId    String
-  directorate      Directorate @relation(fields: [directorateId], references: [id])
-  departmentId     String?
-  department       Department? @relation(fields: [departmentId], references: [id])
-  targets          KPITarget[]
-  results          KPIResult[]
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-}
-
-model KPITarget {
-  id          String   @id @default(uuid())
-  kpiId       String
-  kpi         KPI      @relation(fields: [kpiId], references: [id], onDelete: Cascade)
-  period      String // "2026-M01", "2026-Q1", "2026"
-  targetValue Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model KPIResult {
-  id           String   @id @default(uuid())
-  kpiId        String
-  kpi          KPI      @relation(fields: [kpiId], references: [id], onDelete: Cascade)
-  period       String
-  actualValue  Float
-  targetValue  Float
-  score        Float
-  remarks      String?
-  submittedById String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Report {
-  id            String           @id @default(uuid())
-  title         String
-  type          String // MONTHLY, QUARTERLY, ANNUAL, DIRECTORATE
-  period        String // "2026-07"
-  summary       String
-  dataJson      String?
-  status        String           @default("DRAFT") // DRAFT, SUBMITTED, MANAGER_APPROVED, DIRECTOR_APPROVED, REJECTED
-  authorId      String
-  author        User             @relation("ReportAuthor", fields: [authorId], references: [id])
-  directorateId String
-  directorate   Directorate      @relation(fields: [directorateId], references: [id])
-  approvals     ReportApproval[]
-  attachments   Attachment[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-}
-
-model ReportApproval {
-  id             String   @id @default(uuid())
-  reportId       String
-  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  approverId     String
-  approver       User     @relation(fields: [approverId], references: [id])
-  roleAtApproval String // MANAGER, DIRECTOR
-  action         String // APPROVED, REJECTED
-  comments       String?
-  createdAt      DateTime @default(now())
-}
+// ─── Notifications & Audit ────────────────────────────────────────────────────
 
 model Notification {
   id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username  String                       // target user's KingsChat handle
   title     String
   message   String
-  type      String   @default("INFO") // INFO, APPROVAL_REQUEST, ALERT, DEADLINE
+  type      String   @default("INFO")   // INFO | APPROVAL_REQUEST | ALERT | DEADLINE
   read      Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
@@ -264,24 +85,10 @@ model Notification {
 
 model AuditLog {
   id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username  String?                      // nullable — system actions have no user
   action    String
   resource  String
   details   String?
   ipAddress String?
-  createdAt DateTime @default(now())
-}
-
-model Attachment {
-  id        String   @id @default(uuid())
-  fileName  String
-  fileUrl   String
-  fileType  String
-  fileSize  Int
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id])
-  reportId  String?
-  report    Report?  @relation(fields: [reportId], references: [id])
   createdAt DateTime @default(now())
 }

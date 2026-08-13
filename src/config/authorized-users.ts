@@ -1,244 +1,145 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
-export interface AuthorizedUserConfig {
-  kingschatUsername: string; // KingsChat username or handle (e.g. "alex_director", "dr_peremobowei")
-  aliases?: string[]; // Additional handles or base64 OAuth IDs (e.g. "pereedi", "dlNha2xlZ0...")
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type RosterRole = 'OFEM' | 'AD' | 'BOTH';
+
+export interface RosterEntry {
+  /** KingsChat handle — lowercase, no @ prefix. This is the primary key. */
+  username: string;
+  /** Display name shown in the UI. */
   name: string;
-  role: 'SUPER_ADMIN' | 'DIRECTOR';
-  directorateCode?: string; // TECH_DIGITAL, FINTECH, SOCIAL_MEDIA, CITIZEN_GLOBAL, RESEARCH_DATA, CONTENT_MEDIA, DIGITAL_ASSETS
-  directorateRole?: string; // e.g. "Technology & Digital Innovation Director", "OFEM Executive Minister"
-  email?: string;
-  phone?: string;
+  /** OFEM = executive-only, AD = directorate-only, BOTH = dual login. */
+  role: RosterRole;
+  /** Required for AD and BOTH users. One of the 7 official directorate codes. */
+  directorate?: string;
+  /** Optional dev/test shortcut — matching this value in verifyKingsChatToken
+   *  triggers the mock path instead of hitting the real KingsChat API. */
+  mockId?: string;
 }
 
-/**
- * AUTHORIZED USERS ROSTER
- * Simply add or remove KingsChat usernames below for testing or production deployment.
- */
-export const AUTHORIZED_USERS: AuthorizedUserConfig[] = [
-  // 👑 OFEM Executive Officers (SUPER_ADMIN — Access to all 7 Directorates & Approvals)
-  {
-    kingschatUsername: 'pereedi3161',
-    name: 'pereedi3161',
-    role: 'SUPER_ADMIN',
-    directorateRole: 'OFEM Executive Minister',
-    email: 'admin@ccpms.org',
-  },
-  {
-    kingschatUsername: 'pst_joy',
-    name: 'pst_joy',
-    role: 'SUPER_ADMIN',
-    directorateRole: 'OFEM Executive Minister',
-    email: 'admin@ccpms.org',
-  },
-  {
-    kingschatUsername: 'pereedi',
-    name: 'pereedi',
-    role: 'SUPER_ADMIN',
-    directorateRole: 'OFEM Executive Minister',
-    email: 'admin@ccpms.org',
-  },
+// ─── Roster ────────────────────────────────────────────────────────────────────
+// Exactly 8 entries per Architecture Brief v2 §2.
+// Only these usernames may authenticate — anyone else is rejected at the app
+// layer after the KC profile fetch succeeds.
 
-
-  // 🏢 Assistant Directors (DIRECTOR — Restricted strictly to assigned Directorate)
- /* {
-    kingschatUsername: 'pereedi',
-    name: 'pereedi',
-    role: 'DIRECTOR',
-    directorateCode: 'TECH_DIGITAL',
-    directorateRole: 'Technology & Digital Innovation Director',
-    email: 'director.tech@ccpms.org',
-  },*/
+export const ROSTER: RosterEntry[] = [
   {
-    kingschatUsername: 'alexdabest',
-    name: 'alexdabest',
-    role: 'DIRECTOR',
-    directorateCode: 'TECH_DIGITAL',
-    directorateRole: 'Technology & Digital Innovation Director',
-    email: 'director.tech@ccpms.org',
-  },
-
-  {
-    kingschatUsername: 'ngbadebo',
-    name: 'ngbadebo',
-    role: 'DIRECTOR',
-    directorateCode: 'FINTECH',
-    directorateRole: 'FinTech Products Director',
-    email: 'director.fintech@ccpms.org',
+    username:    'alexdabest',
+    name:        'Alex (Technology & Digital Innovation)',
+    role:        'AD',
+    directorate: 'TECH_DIGITAL',
   },
   {
-    kingschatUsername: 'pastorstar',
-    name: 'pastorstar',
-    role: 'DIRECTOR',
-    directorateCode: 'SOCIAL_MEDIA',
-    directorateRole: 'Social Media & Distribution Director',
-    email: 'director.social@ccpms.org',
+    username:    'ngbadebo',
+    name:        'Ngbadebo (FinTech & Technology Products)',
+    role:        'AD',
+    directorate: 'FINTECH',
   },
   {
-    kingschatUsername: 'pst_joy',
-    name: 'pst_joy',
-    role: 'DIRECTOR',
-    directorateCode: 'CITIZEN_GLOBAL',
-    directorateRole: 'Citizen Engagement Director',
-    email: 'director.citizen@ccpms.org',
+    username:    'pastorstar',
+    name:        'Pastor Star (Social Media, Platforms & Distribution)',
+    role:        'AD',
+    directorate: 'SOCIAL_MEDIA',
   },
   {
-    kingschatUsername: 'pidegr8',
-    name: 'pidegr8',
-    role: 'DIRECTOR',
-    directorateCode: 'RESEARCH_DATA',
-    directorateRole: 'Research & Data Intelligence Director',
-    email: 'director.research@ccpms.org',
+    username:    'pst_joy',
+    name:        'Pst. Joy (Citizen Engagement & Global Localization)',
+    role:        'BOTH',
+    directorate: 'CITIZEN_GLOBAL',
   },
   {
-    kingschatUsername: 'pst_tope',
-    name: 'pst_tope',
-    role: 'DIRECTOR',
-    directorateCode: 'CONTENT_MEDIA',
-    directorateRole: 'Content & Media Production Director',
-    email: 'director.content@ccpms.org',
+    username:    'pidegr8',
+    name:        'Pidegr8 (Research, Data Intelligence & Governance)',
+    role:        'AD',
+    directorate: 'RESEARCH_DATA',
   },
   {
-    kingschatUsername: 'bro_princewill',
-    name: 'bro_princewill',
-    role: 'DIRECTOR',
-    directorateCode: 'DIGITAL_ASSETS',
-    directorateRole: 'Digital Assets & Language Director',
-    email: 'director.assets@ccpms.org',
+    username:    'pst_tope',
+    name:        'Pst. Tope (Content & Media Production)',
+    role:        'AD',
+    directorate: 'CONTENT_MEDIA',
+  },
+  {
+    username:    'bro_princewill',
+    name:        'Bro. Princewill (Digital Asset Management & Language Services)',
+    role:        'AD',
+    directorate: 'DIGITAL_ASSETS',
+  },
+  {
+    username:    'pereedi',
+    name:        'Pereedi (Technology & Digital Innovation)',
+    role:        'BOTH',
+    directorate: 'TECH_DIGITAL',
+    mockId:      'pereedi',  // dev test account — matches verifyKingsChatToken mock path
   },
 ];
 
+// ─── Lookup helpers ────────────────────────────────────────────────────────────
+
 /**
- * Finds all matching authorized user configurations for a KingsChat username, handle, or profile.
- * Supports base64 OAuth IDs, email/name matching, and multi-role portal selection.
+ * Find a single roster entry by any combination of identifiers.
+ * Priority: mockId > username > email (derived from KC profile).
+ * Returns `undefined` if no match — callers MUST reject the request in that case.
  */
-export function getAuthorizedUserConfigs(usernameOrId: string, profile?: any): AuthorizedUserConfig[] {
-  if (!usernameOrId && !profile) return [];
+export function findRosterEntry(args: {
+  mockId?:  string;
+  username?: string;
+  email?:    string;
+}): RosterEntry | undefined {
+  const { mockId, username, email } = args;
 
-  const rawInput = (usernameOrId || '').trim().toLowerCase().replace(/^@/, '');
-  const profUser = (profile?.username || '').trim().toLowerCase().replace(/^@/, '');
-  const profId = (profile?.id || '').trim().toLowerCase();
-  const profEmail = (profile?.email || '').trim().toLowerCase();
-  const profName = (profile?.name || '').trim().toLowerCase();
-
-  // Step 1: Direct match on handle or aliases
-  let matches = AUTHORIZED_USERS.filter((u) => {
-    const handle = u.kingschatUsername.trim().toLowerCase().replace(/^@/, '');
-    const aliases = (u.aliases || []).map((a) => a.trim().toLowerCase().replace(/^@/, ''));
-
-    if (rawInput && (handle === rawInput || aliases.includes(rawInput))) return true;
-    if (profUser && (handle === profUser || aliases.includes(profUser))) return true;
-    if (profId && (handle === profId || aliases.includes(profId))) return true;
-    return false;
-  });
-
-  if (matches.length > 0) return matches;
-
-  // Step 2: Match on Email
-  if (profEmail) {
-    matches = AUTHORIZED_USERS.filter((u) => u.email && u.email.trim().toLowerCase() === profEmail);
-    if (matches.length > 0) return matches;
+  // 1. Exact mockId match (dev/test only)
+  if (mockId) {
+    const byMock = ROSTER.find((r) => r.mockId === mockId);
+    if (byMock) return byMock;
   }
 
-
-  // Step 3: Match on display name or handle substring
-  if (profName && !profName.includes('=') && profName.length <= 40) {
-    matches = AUTHORIZED_USERS.filter((u) =>
-      u.name.trim().toLowerCase() === profName ||
-      u.kingschatUsername.trim().toLowerCase() === profName ||
-      profName.startsWith(u.kingschatUsername.trim().toLowerCase()) ||
-      u.kingschatUsername.trim().toLowerCase().startsWith(profName)
-    );
-    if (matches.length > 0) return matches;
+  // 2. Exact username match (strip leading @, lowercase)
+  if (username) {
+    const clean = username.trim().toLowerCase().replace(/^@/, '');
+    const byUser = ROSTER.find((r) => r.username === clean);
+    if (byUser) return byUser;
   }
 
-  // Step 4: Base64 OAuth ID Fallback for KingsChat authenticated users
-  // Resolves using the authenticating user's own KingsChat profile (username, name, email)
-  if (profile && (profile.username || profile.name || profile.email || profile.id)) {
-    console.log('[DEBUG] KingsChat Profile Username:', profile?.username);
-    console.log('[DEBUG] Full KingsChat Profile Payload:', JSON.stringify(profile));
-
-    const cleanUser = (profile.username && !profile.username.includes('=') && profile.username.length <= 30)
-      ? profile.username.replace(/^@/, '')
-      : (profile.email ? profile.email.split('@')[0] : (profile.name && !profile.name.includes('=') ? profile.name.toLowerCase().replace(/[^a-z0-9_]/g, '') : 'kc_user'));
-
-    const realName = (profile.name && !profile.name.includes('=')) ? profile.name : cleanUser;
-
-    return [
-      {
-        kingschatUsername: cleanUser,
-        name: realName,
-        role: 'DIRECTOR',
-        directorateCode: 'TECH_DIGITAL',
-        email: profile.email || `${cleanUser.toLowerCase()}@ccpms.org`,
-      },
-    ];
+  // 3. Email prefix match (e.g. alexdabest@kingschat.online → alexdabest)
+  if (email) {
+    const prefix = email.split('@')[0].trim().toLowerCase();
+    const byEmail = ROSTER.find((r) => r.username === prefix);
+    if (byEmail) return byEmail;
   }
 
-  // No match found — caller must handle (throw Access Denied)
-  return [];
+  return undefined;
 }
 
-/**
- * Finds an authorized user configuration by KingsChat username / handle and optional requestedRole
- */
-export function getAuthorizedUserConfig(username: string, requestedRole?: string, profile?: any): AuthorizedUserConfig | undefined {
-  const configs = getAuthorizedUserConfigs(username, profile);
-  if (configs.length === 0) return undefined;
-  if (requestedRole) {
-    const found = configs.find((c) => c.role === requestedRole);
-    if (found) return found;
-  }
-  return configs[0];
-}
+// ─── DB sync ───────────────────────────────────────────────────────────────────
 
 /**
- * Automatically syncs the AUTHORIZED_USERS roster into the database
+ * Upsert all 8 roster entries into the `AuthorizedUser` table.
+ * Called at server startup and from the seed script.
  */
-export async function syncAuthorizedUsersToDatabase(prisma: PrismaClient) {
+export async function syncRosterToDatabase(prisma: PrismaClient): Promise<void> {
   try {
-    const roles = await prisma.role.findMany();
-    const directorates = await prisma.directorate.findMany();
-
-    const roleMap = new Map(roles.map((r) => [r.name, r.id]));
-    const dirMap = new Map(directorates.map((d) => [d.code, d.id]));
-
-    const superAdminRoleId = roleMap.get('SUPER_ADMIN');
-    const directorRoleId = roleMap.get('DIRECTOR');
-
-    if (!superAdminRoleId || !directorRoleId) {
-      logger.warn('[UserRosterSync] Roles not initialized in database yet');
-      return;
-    }
-
-    for (const config of AUTHORIZED_USERS) {
-      const roleId = config.role === 'SUPER_ADMIN' ? superAdminRoleId : directorRoleId;
-      const directorateId = config.directorateCode ? dirMap.get(config.directorateCode) || null : null;
-
-      await prisma.user.upsert({
-        where: { kingschatUserId: config.kingschatUsername },
+    for (const entry of ROSTER) {
+      await (prisma as any).authorizedUser.upsert({
+        where:  { username: entry.username },
         update: {
-          name: config.name,
-          roleId,
-          directorateId,
-          email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
-          phone: config.phone || '+2348000000000',
+          name:        entry.name,
+          role:        entry.role,
+          directorate: entry.directorate ?? null,
         },
         create: {
-          kingschatUserId: config.kingschatUsername,
-          name: config.name,
-          roleId,
-          directorateId,
-          email: config.email || `${config.kingschatUsername.toLowerCase()}@ccpms.org`,
-          phone: config.phone || '+2348000000000',
-          status: 'ACTIVE',
+          username:    entry.username,
+          name:        entry.name,
+          role:        entry.role,
+          directorate: entry.directorate ?? null,
         },
       });
     }
-
-    logger.info(`[UserRosterSync] Synchronized ${AUTHORIZED_USERS.length} authorized users to database.`);
+    logger.info(`[RosterSync] Synchronized ${ROSTER.length} authorized users to database.`);
   } catch (error: any) {
-    logger.error(`[UserRosterSync] Failed to sync users to database: ${error.message}`);
+    logger.error(`[RosterSync] Failed to sync roster: ${error.message}`);
+    throw error;
   }
 }

@@ -9,8 +9,17 @@ export const ENV = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'ccpms_refresh_secret_key_2026_antigravity',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  KINGSCHAT_API_URL: process.env.KINGSCHAT_API_URL || 'https://connect.kingsch.at/api',
-  KINGSCHAT_API_KEY: process.env.KINGSCHAT_API_KEY || '43cWL2OYutzOND0zGhiU94UficpXqSPkWEBtj+ENtIQ=',
-  KINGSCHAT_CLIENT_ID: process.env.KINGSCHAT_CLIENT_ID || 'd697c531-b03b-4370-a4b3-c26483c4f044',
+
+  // Was "https://connect.kingsch.at/api" — missing the "/developer" segment,
+  // so GET `${KINGSCHAT_API_URL}/user/profile` was hitting a path that
+  // doesn't exist per the KingsChat dev docs.
+  KINGSCHAT_API_URL: process.env.KINGSCHAT_API_URL || 'https://connect.kingsch.at/developer/api',
+  KINGSCHAT_OAUTH_TOKEN_URL: process.env.KINGSCHAT_OAUTH_TOKEN_URL || 'https://connect.kingsch.at/developer/api/oauth2/token',
+
+  // Required by the KC docs for every request (profile fetch AND token exchange).
+  // Get this from your project's page in the KingsChat developer portal.
+  KINGSCHAT_API_KEY: process.env.KINGSCHAT_API_KEY || '',
+  KINGSCHAT_CLIENT_ID: process.env.KINGSCHAT_CLIENT_ID || '',
+
   DEV_MOCK_KINGSCHAT: process.env.DEV_MOCK_KINGSCHAT === 'true',
 };

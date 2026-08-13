@@ -8,7 +8,7 @@ const notificationsService = new NotificationsService();
 export class NotificationsController {
   async getUserNotifications(req: AuthRequest, res: Response) {
     try {
-      const list = await notificationsService.getUserNotifications(req.user!.id);
+      const list = await notificationsService.getUserNotifications(req.user!.username);
       return sendSuccess(res, list, 'Notifications retrieved');
     } catch (error: any) {
       return sendError(res, error.message, 400);
@@ -17,8 +17,8 @@ export class NotificationsController {
 
   async markAsRead(req: AuthRequest, res: Response) {
     try {
-      const id = req.params.id as string;
-      await notificationsService.markAsRead(id, req.user!.id);
+      const notifId = req.params.id as string;
+      await notificationsService.markAsRead(notifId, req.user!.username);
       return sendSuccess(res, null, 'Notification marked as read');
     } catch (error: any) {
       return sendError(res, error.message, 400);
@@ -27,7 +27,7 @@ export class NotificationsController {
 
   async markAllAsRead(req: AuthRequest, res: Response) {
     try {
-      await notificationsService.markAllAsRead(req.user!.id);
+      await notificationsService.markAllAsRead(req.user!.username);
       return sendSuccess(res, null, 'All notifications marked as read');
     } catch (error: any) {
       return sendError(res, error.message, 400);

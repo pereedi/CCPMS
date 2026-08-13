@@ -2,14 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import authRoutes from './auth/auth.routes';
-import usersRoutes from './users/users.routes';
+import recordsRouter from './records/records.router';
+import reviewsRouter from './reviews/reviews.router';
+import uploadRouter from './uploads/upload.router';
 import directoratesRoutes from './directorates/directorates.routes';
-import projectsRoutes from './projects/projects.routes';
-import kpiRoutes from './kpis/kpis.routes';
-import reportsRoutes from './reports/reports.routes';
-import dashboardRoutes from './dashboard/dashboard.routes';
 import notificationsRoutes from './notifications/notifications.routes';
-import auditRoutes from './audit/audit.routes';
 import { AuthController } from './auth/auth.controller';
 import { errorHandler } from './middleware/error.middleware';
 
@@ -23,28 +20,26 @@ app.use(express.urlencoded({ extended: true }));
 // Serve Frontend Static Assets
 app.use(express.static(path.join(__dirname, '../public')));
 
-// KingsChat Registered Callback Endpoint (POST https://ccpms.onrender.com/kingschat-callback)
+// KingsChat Registered Callback Endpoint
 app.post('/kingschat-callback', (req, res) => authController.handleKingsChatCallback(req, res));
+app.get('/kingschat-callback',  (req, res) => authController.handleKingsChatCallback(req, res));
 
-// System Health Endpoint
-app.get('/health', (req, res) => {
+// System Health
+app.get('/health', (_req, res) => {
   res.status(200).json({
-    status: 'UP',
-    system: 'CCPMS Backend API',
+    status:    'UP',
+    system:    'CCPMS Backend API',
     timestamp: new Date().toISOString(),
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/directorates', directoratesRoutes);
-app.use('/api/projects', projectsRoutes);
-app.use('/api/kpis', kpiRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+// ── API Routes ─────────────────────────────────────────────────────────────────
+app.use('/api/auth',          authRoutes);
+app.use('/api/records',       recordsRouter);
+app.use('/api/reviews',       reviewsRouter);
+app.use('/api/upload',        uploadRouter);
+app.use('/api/directorates',  directoratesRoutes);
 app.use('/api/notifications', notificationsRoutes);
-app.use('/api/audit', auditRoutes);
 
 // SPA Client Fallback
 app.use((req, res, next) => {
@@ -54,7 +49,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 404 Fallback for unhandled API routes
+// 404
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });

@@ -1,161 +1,113 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
-import { prisma } from '../config/database';
 import { sendError } from '../utils/response';
-import { getAuthorizedUserConfig } from '../config/authorized-users';
+import { findRosterEntry } from '../config/authorized-users';
+
+// ─── Request type ─────────────────────────────────────────────────────────────
 
 export interface AuthRequest extends Request {
   user?: {
-    id: string;
-    kingschatUserId: string;
-    username: string;
-    name: string;
-    email?: string | null;
-    role: string | { id: string; name: string };
-    directorateRole?: string;
-    permissions: string[];
-    directorate?: { id: string; name: string; code: string } | null;
-    directorateId?: string | null;
-    departmentId?: string | null;
+    username:    string;           // KingsChat handle (PK)
+    name:        string;
+    email?:      string | null;
     profilePhoto?: string | null;
-    status?: string;
-    lastLogin?: string;
+    role:        'OFEM' | 'AD';
+    directorate?: string | null;   // directorate code, null for OFEM sessions
+    permissions: string[];
   };
 }
 
-/**
- * Sanitize a raw ID string into a clean KingsChat handle.
- * Returns null if the value looks like a base64 token, UUID, or OAuth hash.
- */
-function sanitizeHandle(raw: string | undefined | null): string | null {
-  if (!raw) return null;
-  const s = raw.trim().replace(/^@/, '');
-  if (!s) return null;
-  // Reject: base64 (contains =, +), UUIDs (8-4-4 pattern), long OAuth hashes
-  if (
-    s.includes('=') ||
-    s.includes('+') ||
-    s.length > 30 ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
-  ) {
-    return null;
-  }
-  return s;
-}
+// ─── Middleware ───────────────────────────────────────────────────────────────
 
-export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    let decoded: any = null;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        decoded = jwt.verify(token, ENV.JWT_SECRET) as any;
-      } catch (err) {
-        // Token invalid/expired — decoded stays null
-      }
+    if (!authHeader?.startsWith('Bearer ')) {
+      // No token — still continue (routes that require auth will fail with 401 later)
+      return next();
     }
 
-    // ── 1. Extract identifiers from JWT ──────────────────────────────────────
-    // JWT fields: { userId: <DB UUID>, kingschatUserId: <clean handle>, role: <string> }
-    // IMPORTANT: `decoded.userId` is always a DB UUID — never use it as a display handle.
-    // IMPORTANT: `decoded.kingschatUserId` is the clean KingsChat username.
-    const rawKcHandle = decoded?.kingschatUserId;   // e.g. "pereedi"
-    const dbUserId    = decoded?.userId;             // e.g. "a3f1b2c4-..."  (UUID only)
-    const jwtRole     = decoded?.role;               // e.g. "SUPER_ADMIN"
-
-    // Sanitize to guarantee no base64/UUID reaches the display layer
-    const cleanHandle = sanitizeHandle(rawKcHandle)
-      ?? getAuthorizedUserConfig(rawKcHandle, jwtRole)?.kingschatUsername
-      ?? null;
-
-    // Get roster config entry for this user
-    const config = getAuthorizedUserConfig(cleanHandle ?? rawKcHandle, jwtRole) ?? null;
-
-    // ── 2. Fetch DB user — ONLY by explicit ID, never "first active" fallback ─
-    let user: any = null;
-
-    if (dbUserId) {
-      user = await prisma.user.findUnique({
-        where: { id: dbUserId },
-        include: { role: true, directorate: true },
-      });
+    let decoded: any;
+    try {
+      decoded = jwt.verify(authHeader.split(' ')[1], ENV.JWT_SECRET);
+    } catch {
+      // Expired / invalid token — leave req.user undefined, routes decide what to do
+      return next();
     }
 
-    if (!user && cleanHandle) {
-      user = await prisma.user.findFirst({
-        where: { kingschatUserId: cleanHandle },
-        include: { role: true, directorate: true },
-      });
+    const { username, role, directorate } = decoded as {
+      username: string;
+      role: 'OFEM' | 'AD';
+      directorate?: string | null;
+    };
+
+    if (!username || !role) return next();
+
+    // Verify the user is still on the roster (handles de-provisioning)
+    const roster = findRosterEntry({ username });
+    if (!roster) return next();  // removed from roster — session silently invalidated
+
+    // Fetch live profile data from DB (name, email, photo)
+    let dbUser: any = null;
+    try {
+      const { prisma } = await import('../config/database');
+      dbUser = await (prisma as any).authorizedUser.findUnique({ where: { username } });
+    } catch {
+      // DB unavailable — fall back to roster static data
     }
 
-    // ↑ If user is still null here, we build the response purely from JWT + roster.
-    // We do NOT fall back to any random "first active user" in the database.
-
-    // ── 3. Determine role ─────────────────────────────────────────────────────
-    const userRole = user?.role?.name || jwtRole || config?.role || 'SUPER_ADMIN';
-    const isOFEM   = userRole === 'SUPER_ADMIN';
-    const dirRoleTitle = isOFEM
-      ? 'OFEM Executive Minister'
-      : (config?.directorateRole
-          || (user?.directorate?.name ? `${user.directorate.name} Director` : 'Assistant Director'));
-
-    // ── 4. Resolve display handle (priority: DB > roster > JWT clean > user name) ─────────
-    const dbHandle = sanitizeHandle(user?.kingschatUserId);
-    const resolvedHandle = dbHandle ?? config?.kingschatUsername ?? cleanHandle ?? user?.name ?? 'kc_user';
-
-    // ── 5. Resolve display name (priority: DB > roster name > roster handle > handle) ─────────
-    const dbName = (user?.name && user.name.length <= 60 && !user.name.includes('='))
-      ? user.name
-      : null;
-    const resolvedName = dbName ?? config?.name ?? config?.kingschatUsername ?? resolvedHandle;
-
-    // ── 6. Avatar (only real HTTP URLs, no placeholder domains) ──────────────
-    const photo = (user?.profilePhoto
-      && user.profilePhoto.startsWith('http')
-      && !user.profilePhoto.includes('unsplash.com'))
-      ? user.profilePhoto
-      : null;
-
-    // ── 7. Build request user object ─────────────────────────────────────────
     req.user = {
-      id: user?.id || `user-${resolvedHandle}`,
-      kingschatUserId: resolvedHandle,
-      username: resolvedHandle,
-      name: resolvedName,
-      email: user?.email || config?.email || `${resolvedHandle}@ccpms.org`,
-      profilePhoto: photo,
-      status: 'ACTIVE',
-      role: userRole,
-      directorateRole: dirRoleTitle,
-      permissions: isOFEM
-        ? [
-            'VIEW_ALL', 'MANAGE_REPORTS', 'APPROVE_REPORTS', 'MANAGE_USERS', 'VIEW_AUDIT',
-            'reports:read', 'reports:create', 'reports:review', 'reports:approve',
-            'kpis:read', 'kpis:manage', 'kpis:update_result',
-            'projects:read', 'projects:manage',
-            'directorates:read', 'users:read', 'users:manage',
-            'audit:read', 'dashboard:read', 'notifications:read',
-          ]
-        : [
-            'SUBMIT_REPORT', 'VIEW_OWN_REPORTS', 'VIEW_KPIS',
-            'reports:read', 'reports:create',
-            'kpis:read', 'kpis:update_result',
-            'projects:read', 'projects:manage',
-            'directorates:read', 'dashboard:read', 'notifications:read',
-          ],
-      directorate: isOFEM
-        ? null
-        : (user?.directorate
-            ? { id: user.directorate.id, name: user.directorate.name, code: user.directorate.code }
-            : null),
-      directorateId: isOFEM ? null : (user?.directorateId || null),
-    } as any;
+      username,
+      name:        dbUser?.name        ?? roster.name,
+      email:       dbUser?.email       ?? null,
+      profilePhoto: dbUser?.profilePhoto ?? null,
+      role,
+      directorate: role === 'OFEM' ? null : (directorate ?? roster.directorate ?? null),
+      permissions: permissionsForRole(role),
+    };
 
     return next();
   } catch (error: any) {
-    return sendError(res, `Authentication failed: ${error.message}`, 401);
+    return sendError(_res, `Authentication failed: ${error.message}`, 401);
   }
+}
+
+// ─── Guard helper ─────────────────────────────────────────────────────────────
+
+/** Use after authMiddleware to require an authenticated session. */
+export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) return sendError(res, 'Authentication required', 401);
+  return next();
+}
+
+/** Require a specific role. Use after requireAuth. */
+export function requireRole(...roles: Array<'OFEM' | 'AD'>) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) return sendError(res, 'Authentication required', 401);
+    if (!roles.includes(req.user.role)) {
+      return sendError(res, `Insufficient permissions. Required: ${roles.join(' or ')}`, 403);
+    }
+    return next();
+  };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function permissionsForRole(role: 'OFEM' | 'AD'): string[] {
+  if (role === 'OFEM') {
+    return [
+      'records:read_all', 'records:review',
+      'reviews:create', 'reviews:update',
+      'directorates:read',
+      'dashboard:read', 'audit:read',
+      'notifications:read',
+    ];
+  }
+  return [
+    'records:create', 'records:read_own',
+    'directorates:read',
+    'dashboard:read',
+    'notifications:read',
+  ];
 }
