@@ -74,6 +74,13 @@ export const ROSTER: RosterEntry[] = [
     directorate: 'Technology & Digital Innovation',
     mockId:      'pereedi',  // dev test account — matches verifyKingsChatToken mock path
   },
+   {
+    username:    'godgift11',
+    name:        'godgift11',
+    role:        'BOTH',
+    directorate: 'Technology & Digital Innovation',
+    mockId:      'godgift11',  // dev test account — matches verifyKingsChatToken mock path
+  },
 ];
 
 // ─── Lookup helpers ────────────────────────────────────────────────────────────
